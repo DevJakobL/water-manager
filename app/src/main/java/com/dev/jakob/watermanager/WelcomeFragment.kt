@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.dev.jakob.watermanager.data.model.Container
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -59,7 +60,7 @@ class WelcomeFragment : Fragment() {
         buttonContainer.removeAllViews()
         for (container in containers) {
             val button = Button(requireContext())
-            button.text = "${container.name} (${container.size}ml)"
+            button.text = getString(R.string.container_button_text, container.name, container.size)
             button.setOnClickListener {
                 totalWater += container.size
                 updateWaterText()
@@ -69,6 +70,6 @@ class WelcomeFragment : Fragment() {
     }
 
     private fun updateWaterText() {
-        totalWaterText.text = "$totalWater ml"
+        totalWaterText.text = getString(R.string.water_amount_ml, totalWater)
     }
 }

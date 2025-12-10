@@ -9,7 +9,9 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import androidx.core.content.edit // Import für die KTX-Erweiterungsfunktion
 import androidx.fragment.app.Fragment
+import com.dev.jakob.watermanager.data.model.Container
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -98,6 +100,6 @@ class SettingsFragment : Fragment() {
             }
         }
         val json = gson.toJson(newContainers)
-        sharedPreferences.edit().putString("containers", json).apply()
+        sharedPreferences.edit { putString("containers", json) }
     }
 }
