@@ -1,6 +1,7 @@
 package com.dev.jakob.watermanager.data.repository
 
 import com.dev.jakob.watermanager.data.model.Container
+import com.dev.jakob.watermanager.data.model.Water // Import hinzugefügt
 import com.dev.jakob.watermanager.data.source.WaterLocalDataSource
 
 /**
@@ -21,29 +22,29 @@ class WaterRepository(private val waterLocalDataSource: WaterLocalDataSource) {
     }
 
     /**
-     * Speichert die insgesamt getrunkene Wassermenge in der lokalen Datenquelle.
-     *
-     * @param totalWater Die zu speichernde Gesamtmenge an Wasser in Millilitern.
-     */
-    fun saveTotalWater(totalWater: Int) {
-        waterLocalDataSource.saveTotalWater(totalWater)
-    }
-
-    /**
-     * Lädt die insgesamt getrunkene Wassermenge aus der lokalen Datenquelle.
-     *
-     * @return Die insgesamt getrunkene Wassermenge in Millilitern, oder 0, wenn kein Wert gespeichert ist.
-     */
-    fun loadTotalWater(): Int {
-        return waterLocalDataSource.loadTotalWater()
-    }
-
-    /**
      * Speichert eine Liste von Wasserbehältern in der lokalen Datenquelle.
      *
      * @param containers Die Liste der zu speichernden [Container]-Objekte.
      */
     fun saveContainers(containers: List<Container>) {
         waterLocalDataSource.saveContainers(containers)
+    }
+
+    /**
+     * Speichert die Liste der getrunkenen Wassermengen in der lokalen Datenquelle.
+     *
+     * @param waterList Die Liste der zu speichernden [Water]-Objekte.
+     */
+    fun saveWaterIntake(waterList: List<Water>) {
+        waterLocalDataSource.saveWaterIntake(waterList)
+    }
+
+    /**
+     * Lädt die Liste der getrunkenen Wassermengen aus der lokalen Datenquelle.
+     *
+     * @return Die Liste der [Water]-Objekte, oder eine leere Liste, wenn kein Wert gespeichert ist.
+     */
+    fun loadWaterIntake(): List<Water> {
+        return waterLocalDataSource.loadWaterIntake()
     }
 }

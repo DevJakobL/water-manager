@@ -2,8 +2,9 @@ package com.dev.jakob.watermanager.data.source
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.core.content.edit // Import für die KTX-Erweiterungsfunktion
+import androidx.core.content.edit
 import com.dev.jakob.watermanager.data.model.Container
+import com.dev.jakob.watermanager.data.model.Water // Import hinzugefügt
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -40,24 +41,6 @@ class WaterLocalDataSource(context: Context, private val gson: Gson) {
     }
 
     /**
-     * Speichert die insgesamt getrunkene Wassermenge in den [SharedPreferences].
-     *
-     * @param totalWater Die zu speichernde Gesamtmenge an Wasser in Millilitern.
-     */
-    fun saveTotalWater(totalWater: Int) {
-        sharedPreferences.edit { putInt(KEY_TOTAL_WATER, totalWater) }
-    }
-
-    /**
-     * Lädt die insgesamt getrunkene Wassermenge aus den [SharedPreferences].
-     *
-     * @return Die insgesamt getrunkene Wassermenge in Millilitern, oder 0, wenn kein Wert gespeichert ist.
-     */
-    fun loadTotalWater(): Int {
-        return sharedPreferences.getInt(KEY_TOTAL_WATER, 0)
-    }
-
-    /**
      * Speichert eine Liste von Wasserbehältern in den [SharedPreferences].
      *
      * @param containers Die Liste der zu speichernden [Container]-Objekte.
@@ -67,9 +50,34 @@ class WaterLocalDataSource(context: Context, private val gson: Gson) {
         sharedPreferences.edit { putString(KEY_CONTAINERS, json) }
     }
 
+    /**
+     * Speichert die Liste der getrunkenen Wassermengen in den [SharedPreferences].
+     *
+     * @param waterList Die Liste der zu speichernden [Water]-Objekte.
+     */
+    fun saveWaterIntake(waterList: List<Water>) {
+        val json = gson.toJson(waterList)
+        sharedPreferences.edit { putString(KEY_WATER_INTAKE, json) }
+    }
+
+    /**
+     * Lädt die Liste der getrunkenen Wassermengen aus den [SharedPreferences].
+     *
+     * @return Die Liste der [Water]-Objekte, oder eine leere Liste, wenn kein Wert gespeichert ist.
+     */
+    fun loadWaterIntake(): List<Water> {
+        val json = sharedPreferences.getString(KEY_WATER_INTAKE, null)
+        return if (json != null) {
+            val type = object : TypeToken<List<Water>>() {}.type
+            gson.fromJson(json, type)
+        } else {
+            emptyList()
+        }
+    }
+
     companion object {
         private const val PREFS_NAME = "WaterManagerPrefs"
         private const val KEY_CONTAINERS = "containers"
-        private const val KEY_TOTAL_WATER = "totalWater"
+        private const val KEY_WATER_INTAKE = "water_intake" // Neuer Schlüssel
     }
 }

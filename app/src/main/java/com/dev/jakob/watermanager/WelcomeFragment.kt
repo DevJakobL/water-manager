@@ -68,8 +68,8 @@ class WelcomeFragment : Fragment() {
      * It observes the total water amount and the list of containers.
      */
     private fun setupObservers() {
-        welcomeViewModel.totalWater.observe(viewLifecycleOwner) { totalWater ->
-            updateWaterText(totalWater)
+        welcomeViewModel.totalWaterToday.observe(viewLifecycleOwner) { totalWaterAmount ->
+            updateWaterText(totalWaterAmount)
         }
         welcomeViewModel.containers.observe(viewLifecycleOwner) { containers ->
             populateButtons(containers)

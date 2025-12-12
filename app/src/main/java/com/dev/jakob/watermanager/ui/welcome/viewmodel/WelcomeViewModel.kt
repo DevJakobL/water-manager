@@ -3,8 +3,11 @@ package com.dev.jakob.watermanager.ui.welcome.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.dev.jakob.watermanager.data.model.Container // Angepasster Import
-import com.dev.jakob.watermanager.data.repository.WaterRepository // Angepasster Import
+import androidx.lifecycle.MediatorLiveData // Import for MediatorLiveData
+import com.dev.jakob.watermanager.data.model.Container
+import com.dev.jakob.watermanager.data.model.Water // Import for Water
+import com.dev.jakob.watermanager.data.repository.WaterRepository
+import java.util.* // Import for Calendar
 
 /**
  * [WelcomeViewModel] ist das ViewModel.
@@ -15,12 +18,18 @@ import com.dev.jakob.watermanager.data.repository.WaterRepository // Angepasster
  */
 class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
 
-    private val _totalWater = MutableLiveData<Int>()
+    private val _waterIntakeList = MutableLiveData<List<Water>>()
     /**
-     * LiveData, die die insgesamt getrunkene Wassermenge in Millilitern enthält.
+     * LiveData, die eine Liste aller getrunkenen Wassermengen ([Water]-Objekte) enthält.
      * Beobachter können sich hier anmelden, um über Änderungen informiert zu werden.
      */
-    val totalWater: LiveData<Int> = _totalWater
+    val waterIntakeList: LiveData<List<Water>> = _waterIntakeList
+
+    /**
+     * LiveData, die die insgesamt an diesem Tag getrunkene Wassermenge in Millilitern enthält.
+     * Dieser Wert wird aus der [waterIntakeList] für den aktuellen Tag berechnet.
+     */
+    val totalWaterToday: MediatorLiveData<Int> = MediatorLiveData()
 
     private val _containers = MutableLiveData<List<Container>>()
     /**
@@ -30,6 +39,18 @@ class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
     val containers: LiveData<List<Container>> = _containers
 
     init {
+        // Beobachte _waterIntakeList und aktualisiere totalWaterToday, wenn sich _waterIntakeList ändert
+        totalWaterToday.addSource(_waterIntakeList) { waterList ->
+            val calendar = Calendar.getInstance()
+            val currentDay = calendar.get(Calendar.DAY_OF_YEAR)
+            val currentYear = calendar.get(Calendar.YEAR)
+
+            val sum = waterList.filter { water: Water ->
+                val waterCalendar = Calendar.getInstance().apply { timeInMillis = water.timestamp }
+                waterCalendar.get(Calendar.DAY_OF_YEAR) == currentDay && waterCalendar.get(Calendar.YEAR) == currentYear
+            }.sumOf { it.amount }
+            totalWaterToday.value = sum
+        }
         loadInitialData()
     }
 
@@ -39,20 +60,21 @@ class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
      */
     private fun loadInitialData() {
         _containers.value = repository.loadContainers()
-        _totalWater.value = repository.loadTotalWater()
+        _waterIntakeList.value = repository.loadWaterIntake()
     }
 
     /**
-     * Fügt die Wassermenge eines bestimmten Behälters zur insgesamt getrunkenen Menge hinzu
-     * und speichert den aktualisierten Wert über das [WaterRepository].
+     * Fügt die Wassermenge eines bestimmten Behälters zur Liste der getrunkenen Mengen hinzu
+     * und speichert die aktualisierte Liste über das [WaterRepository].
      *
      * @param container Der [Container], dessen Wassermenge hinzugefügt werden soll.
      */
     fun addWater(container: Container) {
-        val currentWater = _totalWater.value ?: 0
-        val newTotal = currentWater + container.size
-        _totalWater.value = newTotal
-        repository.saveTotalWater(newTotal)
+        val currentList = _waterIntakeList.value.orEmpty().toMutableList()
+        val newWaterEntry = Water(container.name, container.size, System.currentTimeMillis())
+        currentList.add(newWaterEntry)
+        _waterIntakeList.value = currentList
+        repository.saveWaterIntake(currentList)
     }
 
     /**
