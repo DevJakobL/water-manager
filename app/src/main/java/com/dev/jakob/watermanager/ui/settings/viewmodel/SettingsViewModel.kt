@@ -34,49 +34,13 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
     }
 
     /**
-     * Fügt einen neuen Behälter zur Liste hinzu und aktualisiert die LiveData.
+     * Speichert die übergebene Liste von Behältern über das [WaterRepository]
+     * und aktualisiert die LiveData.
      *
-     * @param container Der hinzuzufügende [Container].
+     * @param containersToSave Die Liste der zu speichernden [Container].
      */
-    fun addContainer(container: Container) {
-        val currentContainers = _containers.value ?: mutableListOf()
-        currentContainers.add(container)
-        _containers.value = currentContainers // Trigger LiveData update
-    }
-
-    /**
-     * Entfernt einen Behälter aus der Liste an einem bestimmten Index und aktualisiert die LiveData.
-     *
-     * @param index Der Index des zu entfernenden Behälters.
-     */
-    fun removeContainerAt(index: Int) {
-        val currentContainers = _containers.value ?: mutableListOf()
-        if (index >= 0 && index < currentContainers.size) {
-            currentContainers.removeAt(index)
-            _containers.value = currentContainers // Trigger LiveData update
-        }
-    }
-
-    /**
-     * Aktualisiert einen Behälter in der Liste an einem bestimmten Index und aktualisiert die LiveData.
-     *
-     * @param index Der Index des zu aktualisierenden Behälters.
-     * @param newContainer Der aktualisierte [Container].
-     */
-    fun updateContainerAt(index: Int, newContainer: Container) {
-        val currentContainers = _containers.value ?: mutableListOf()
-        if (index >= 0 && index < currentContainers.size) {
-            currentContainers[index] = newContainer
-            _containers.value = currentContainers // Trigger LiveData update
-        }
-    }
-
-    /**
-     * Speichert die aktuelle Liste der Behälter über das [WaterRepository].
-     */
-    fun saveContainers() {
-        _containers.value?.let {
-            repository.saveContainers(it)
-        }
+    fun saveContainers(containersToSave: List<Container>) {
+        repository.saveContainers(containersToSave)
+        _containers.value = containersToSave.toMutableList()
     }
 }

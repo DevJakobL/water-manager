@@ -1,111 +1,101 @@
 package com.dev.jakob.watermanager
 
 import android.os.Bundle
-import android.util.Log
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
+import com.dev.jakob.watermanager.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationView
 
 /**
- * Die Hauptaktivität der Water Manager App.
- * Diese Aktivität verwaltet die Navigation mittels einer Drawer-Navigation
- * und lädt verschiedene Fragmente basierend auf der Benutzerauswahl.
+ * The main and only Activity of the Water Manager app, following a Single-Activity architecture.
+ * This activity hosts the [DrawerLayout], the [NavigationView] for navigation,
+ * and a fragment container that displays different screens ([WelcomeFragment], [SettingsFragment])
+ * based on user interaction.
  */
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
-    private lateinit var drawerLayout: DrawerLayout
-    private val TAG = "MainActivity"
+    private lateinit var binding: ActivityMainBinding
 
     /**
-     * Wird aufgerufen, wenn die Aktivität zum ersten Mal erstellt wird.
-     * Initialisiert das Layout, die Drawer-Navigation und lädt das Startfragment.
-     *
-     * @param savedInstanceState Wenn die Aktivität neu initialisiert wird, nachdem sie zuvor
-     *                           beendet wurde, enthält dieser Bundle die Daten, die zuletzt in
-     *                           [onSaveInstanceState] bereitgestellt wurden. Andernfalls ist es null.
+     * Called when the activity is first created.
+     * Initializes the view binding, sets up the toolbar, drawer layout, and navigation view.
+     * It also loads the initial [WelcomeFragment].
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate: Activity started")
-        setContentView(R.layout.activity_main)
-        Log.d(TAG, "onCreate: Layout set")
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        drawerLayout = findViewById(R.id.drawer_layout)
-        val navView = findViewById<NavigationView>(R.id.nav_view)
-        navView.setNavigationItemSelectedListener(this)
-        Log.d(TAG, "onCreate: DrawerLayout and NavigationView initialized")
+        setSupportActionBar(binding.toolbar)
 
         val toggle = ActionBarDrawerToggle(
-            this, drawerLayout, R.string.navigation_drawer_open, R.string.navigation_drawer_close
+            this, binding.drawerLayout, binding.toolbar,
+            R.string.navigation_drawer_open, R.string.navigation_drawer_close
         )
-        drawerLayout.addDrawerListener(toggle)
+        binding.drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.navView.setNavigationItemSelectedListener(this)
 
         if (savedInstanceState == null) {
-            Log.d(TAG, "onCreate: Replacing fragment with WelcomeFragment")
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.content_frame, WelcomeFragment())
-                .commit()
-            navView.setCheckedItem(R.id.nav_home)
+            navigateToHome()
         }
 
-        // OnBackPressedCallback für die Behandlung des Zurück-Buttons
+        // Custom handling for the back button
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                    drawerLayout.closeDrawer(GravityCompat.END)
+                if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    binding.drawerLayout.closeDrawer(GravityCompat.START)
+                } else if (supportFragmentManager.backStackEntryCount > 0) {
+                    supportFragmentManager.popBackStack()
                 } else {
-                    isEnabled = false // Deaktiviere den Callback, um den Standard-Zurück-Button zu ermöglichen
-                    onBackPressedDispatcher.onBackPressed() // Rufe den Standard-Zurück-Button auf
+                    // If no fragments in back stack, perform default action (exit app)
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
                 }
             }
         })
     }
 
     /**
-     * Wird aufgerufen, wenn ein Element in der Navigationsansicht ausgewählt wird.
+     * Handles item selections in the navigation drawer.
+     * Replaces the current fragment with the selected one.
      *
-     * @param item Das ausgewählte Menüelement.
-     * @return True, wenn das Ereignis verbraucht wurde, false sonst.
+     * @param item The selected [MenuItem].
+     * @return True to display the item as the selected item.
      */
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.nav_home -> {
-                supportFragmentManager.beginTransaction()
-                    .replace(R.id.content_frame, WelcomeFragment())
-                    .commit()
-            }
-            R.id.nav_settings -> {
-                supportFragmentManager.beginTransaction()
-                    .replace(R.id.content_frame, SettingsFragment())
-                    .commit()
-            }
+            R.id.nav_home -> navigateToHome()
+            R.id.nav_settings -> navigateToSettings()
         }
-        drawerLayout.closeDrawer(GravityCompat.END)
+        binding.drawerLayout.closeDrawer(GravityCompat.START)
         return true
     }
 
     /**
-     * Diese Hook wird aufgerufen, wenn ein Element in der Optionsleiste ausgewählt wird.
-     *
-     * @param item Das Menüelement, das ausgewählt wurde.
-     * @return True, wenn das Ereignis verbraucht wurde, false sonst.
+     * Navigates to the home screen by replacing the fragment container with [WelcomeFragment].
+     * This is the default screen of the app. It also clears the back stack.
      */
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == android.R.id.home) {
-            if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                drawerLayout.closeDrawer(GravityCompat.END)
-            } else {
-                drawerLayout.openDrawer(GravityCompat.END)
-            }
-            return true
-        }
-        return super.onOptionsItemSelected(item)
+    fun navigateToHome() {
+        // Clear back stack to make Home the top-level destination
+        supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.content_frame, WelcomeFragment())
+            .commit()
+        binding.navView.setCheckedItem(R.id.nav_home)
+    }
+
+    /**
+     * Navigates to the settings screen by replacing the fragment container with [SettingsFragment].
+     */
+    private fun navigateToSettings() {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.content_frame, SettingsFragment())
+            .addToBackStack(null) // Allows user to navigate back to the previous fragment
+            .commit()
     }
 }

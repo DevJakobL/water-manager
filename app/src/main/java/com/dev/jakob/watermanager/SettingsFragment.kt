@@ -1,105 +1,134 @@
 package com.dev.jakob.watermanager
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import androidx.core.content.edit // Import für die KTX-Erweiterungsfunktion
 import androidx.fragment.app.Fragment
 import com.dev.jakob.watermanager.data.model.Container
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.dev.jakob.watermanager.databinding.ContainerItemBinding
+import com.dev.jakob.watermanager.databinding.FragmentSettingsBinding
+import com.dev.jakob.watermanager.ui.settings.viewmodel.SettingsViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
+/**
+ * A [Fragment] for managing the list of water containers.
+ * Users can add, edit, and remove containers. This fragment uses View Binding and a [SettingsViewModel]
+ * to manage its state and interactions with the data layer.
+ */
 class SettingsFragment : Fragment() {
 
-    private lateinit var containerListLayout: LinearLayout
-    private lateinit var sharedPreferences: SharedPreferences
-    private val gson = Gson()
-    private var containers = mutableListOf<Container>()
+    // Lazily inject the SettingsViewModel using Koin
+    private val settingsViewModel: SettingsViewModel by viewModel()
 
+    private var _binding: FragmentSettingsBinding? = null
+
+    // This property is only valid between onCreateView and onDestroyView.
+    private val binding get() = _binding!!
+
+    /**
+     * Inflates the layout for this fragment using View Binding.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        val view = inflater.inflate(R.layout.fragment_settings, container, false)
-        sharedPreferences = requireActivity().getSharedPreferences("WaterManagerPrefs", Context.MODE_PRIVATE)
-        containerListLayout = view.findViewById(R.id.container_list)
-        val addButton = view.findViewById<Button>(R.id.add_container_button)
-        val saveButton = view.findViewById<Button>(R.id.save_button)
-
-        loadContainers()
-        populateContainerList()
-
-        addButton.setOnClickListener {
-            addContainerView(Container("New Container", 0))
-        }
-
-        saveButton.setOnClickListener {
-            saveContainers()
-            // Navigate back to the welcome screen
-            requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.content_frame, WelcomeFragment())
-                .commit()
-        }
-        return view
+    ): View {
+        _binding = FragmentSettingsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    private fun addContainerView(container: Container) {
-        val inflater = LayoutInflater.from(requireContext())
-        val containerItemView = inflater.inflate(R.layout.container_item, containerListLayout, false)
-
-        val nameInput = containerItemView.findViewById<EditText>(R.id.container_name_input)
-        val sizeInput = containerItemView.findViewById<EditText>(R.id.container_size_input)
-        val removeButton = containerItemView.findViewById<Button>(R.id.remove_container_button)
-
-        nameInput.setText(container.name)
-        sizeInput.setText(container.size.toString())
-
-        removeButton.setOnClickListener {
-            containerListLayout.removeView(containerItemView)
-        }
-
-        containerListLayout.addView(containerItemView)
+    /**
+     * Sets up UI listeners and observes ViewModel LiveData.
+     */
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupClickListeners()
+        observeContainers()
+        settingsViewModel.loadContainers()
     }
 
-    private fun populateContainerList() {
-        containerListLayout.removeAllViews()
-        for (container in containers) {
+    /**
+     * Cleans up the binding reference when the view is destroyed.
+     */
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    /**
+     * Sets up click listeners for the 'Add' and 'Save' buttons.
+     */
+    private fun setupClickListeners() {
+        binding.addContainerButton.setOnClickListener {
+            // Add a new empty container view for the user to fill out
+            addContainerView(Container("", 0))
+        }
+
+        binding.saveButton.setOnClickListener {
+            saveContainersFromUi()
+            // Navigation back is handled by MainActivity
+            (activity as? MainActivity)?.navigateToHome()
+        }
+    }
+
+    /**
+     * Observes the list of containers from the [SettingsViewModel] and updates the UI accordingly.
+     */
+    private fun observeContainers() {
+        settingsViewModel.containers.observe(viewLifecycleOwner) { containers ->
+            populateContainerList(containers)
+        }
+    }
+
+    /**
+     * Populates the list of container views based on the data from the ViewModel.
+     *
+     * @param containers The list of [Container]s to display.
+     */
+    private fun populateContainerList(containers: List<Container>) {
+        binding.containerList.removeAllViews()
+        containers.forEach { container ->
             addContainerView(container)
         }
     }
 
-    private fun loadContainers() {
-        val json = sharedPreferences.getString("containers", null)
-        if (json != null) {
-            val type = object : TypeToken<MutableList<Container>>() {}.type
-            containers = gson.fromJson(json, type)
-        } else {
-            // Default containers
-            containers = mutableListOf(
-                Container("Glass", 250),
-                Container("Bottle", 500),
-                Container("Large Bottle", 1000)
-            )
+    /**
+     * Adds a new row to the UI for a single container, either new or existing.
+     *
+     * @param container The [Container] to display in the new row.
+     */
+    private fun addContainerView(container: Container) {
+        val inflater = LayoutInflater.from(requireContext())
+        val itemBinding = ContainerItemBinding.inflate(inflater, binding.containerList, false)
+
+        itemBinding.containerNameInput.setText(container.name)
+        itemBinding.containerSizeInput.setText(if (container.size > 0) container.size.toString() else "")
+
+        itemBinding.removeContainerButton.setOnClickListener {
+            binding.containerList.removeView(itemBinding.root)
         }
+
+        itemBinding.root.tag = itemBinding // Speichere das Binding im Tag der Root-View
+        binding.containerList.addView(itemBinding.root)
     }
 
-    private fun saveContainers() {
+    /**
+     * Gathers the data from all container input fields in the UI,
+     * creates a new list of [Container] objects, and tells the ViewModel to save them.
+     */
+    private fun saveContainersFromUi() {
         val newContainers = mutableListOf<Container>()
-        for (i in 0 until containerListLayout.childCount) {
-            val view = containerListLayout.getChildAt(i)
-            val name = view.findViewById<EditText>(R.id.container_name_input).text.toString()
-            val size = view.findViewById<EditText>(R.id.container_size_input).text.toString().toIntOrNull() ?: 0
-            if (name.isNotBlank()) {
+        for (i in 0 until binding.containerList.childCount) {
+            val view = binding.containerList.getChildAt(i)
+            // Rufe das Binding sicher aus dem Tag ab
+            val itemBinding = view.tag as? ContainerItemBinding ?: continue
+
+            val name = itemBinding.containerNameInput.text.toString()
+            val size = itemBinding.containerSizeInput.text.toString().toIntOrNull() ?: 0
+            if (name.isNotBlank() && size > 0) {
                 newContainers.add(Container(name, size))
             }
         }
-        val json = gson.toJson(newContainers)
-        sharedPreferences.edit { putString("containers", json) }
+        settingsViewModel.saveContainers(newContainers)
     }
 }
