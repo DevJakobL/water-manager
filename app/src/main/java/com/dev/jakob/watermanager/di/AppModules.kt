@@ -2,7 +2,8 @@ package com.dev.jakob.watermanager.di
 
 import com.dev.jakob.watermanager.data.repository.WaterRepository
 import com.dev.jakob.watermanager.data.source.WaterLocalDataSource
-import com.dev.jakob.watermanager.ui.settings.viewmodel.SettingsViewModel // Import für SettingsViewModel
+import com.dev.jakob.watermanager.ui.settings.viewmodel.SettingsViewModel
+import com.dev.jakob.watermanager.ui.statistics.StatisticsViewModel
 import com.dev.jakob.watermanager.ui.welcome.viewmodel.WelcomeViewModel
 import com.google.gson.Gson
 import org.koin.android.ext.koin.androidContext
@@ -28,4 +29,7 @@ val appModule = module {
 
     // Stellt SettingsViewModel bereit. Koin injiziert automatisch das WaterRepository.
     viewModel { SettingsViewModel(get()) }
+
+    // Stellt StatisticsViewModel bereit.
+    viewModel { StatisticsViewModel(get()) }
 }

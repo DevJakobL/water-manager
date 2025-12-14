@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LiveData
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.databinding.FragmentWelcomeBinding
 import com.dev.jakob.watermanager.ui.welcome.viewmodel.WelcomeViewModel
@@ -28,6 +29,11 @@ class WelcomeFragment : Fragment() {
 
     /**
      * Inflates the layout for this fragment using View Binding and sets up the initial view.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate any views in the fragment.
+     * @param container If non-null, this is the parent view that the fragment's UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     * @return The View for the fragment's UI, or null.
      */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -39,7 +45,10 @@ class WelcomeFragment : Fragment() {
 
     /**
      * Sets up observers on the [WelcomeViewModel]'s LiveData to update the UI
-     * whenever the data changes.
+     * whenever the data changes. This is called after the view has been created.
+     *
+     * @param view The View returned by [onCreateView].
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

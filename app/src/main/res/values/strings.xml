@@ -11,4 +11,5 @@
     <string name="save">Save</string>
     <string name="container_button_text">%1$s (%2$dml)</string>
     <string name="water_amount_ml">%1$d ml</string>
+    <string name="water_intake_display">Wassermenge: %.1fL</string>
 </resources>

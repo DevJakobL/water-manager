@@ -15,6 +15,9 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
  * A [Fragment] for managing the list of water containers.
  * Users can add, edit, and remove containers. This fragment uses View Binding and a [SettingsViewModel]
  * to manage its state and interactions with the data layer.
+ *
+ * **Note for future improvement:** The current implementation manually manages views in a LinearLayout.
+ * For better performance and code structure, this should be refactored to use a `RecyclerView` with a `RecyclerView.Adapter`.
  */
 class SettingsFragment : Fragment() {
 
@@ -28,6 +31,11 @@ class SettingsFragment : Fragment() {
 
     /**
      * Inflates the layout for this fragment using View Binding.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate any views in the fragment.
+     * @param container If non-null, this is the parent view that the fragment's UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     * @return The View for the fragment's UI.
      */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -38,7 +46,10 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Sets up UI listeners and observes ViewModel LiveData.
+     * Sets up UI listeners and observes ViewModel LiveData after the view has been created.
+     *
+     * @param view The View returned by [onCreateView].
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -48,7 +59,7 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Cleans up the binding reference when the view is destroyed.
+     * Cleans up the binding reference when the view is destroyed to prevent memory leaks.
      */
     override fun onDestroyView() {
         super.onDestroyView()
@@ -66,7 +77,7 @@ class SettingsFragment : Fragment() {
 
         binding.saveButton.setOnClickListener {
             saveContainersFromUi()
-            // Navigation back is handled by MainActivity
+            // Navigate back to the home screen after saving.
             (activity as? MainActivity)?.navigateToHome()
         }
     }
@@ -82,6 +93,7 @@ class SettingsFragment : Fragment() {
 
     /**
      * Populates the list of container views based on the data from the ViewModel.
+     * It clears the existing list before adding the new views.
      *
      * @param containers The list of [Container]s to display.
      */
@@ -94,6 +106,7 @@ class SettingsFragment : Fragment() {
 
     /**
      * Adds a new row to the UI for a single container, either new or existing.
+     * This method inflates a dedicated item layout and sets its data.
      *
      * @param container The [Container] to display in the new row.
      */
@@ -108,19 +121,22 @@ class SettingsFragment : Fragment() {
             binding.containerList.removeView(itemBinding.root)
         }
 
-        itemBinding.root.tag = itemBinding // Speichere das Binding im Tag der Root-View
+        // Storing the binding in the tag is a workaround to retrieve it later.
+        // This would be unnecessary with a RecyclerView implementation.
+        itemBinding.root.tag = itemBinding
         binding.containerList.addView(itemBinding.root)
     }
 
     /**
      * Gathers the data from all container input fields in the UI,
      * creates a new list of [Container] objects, and tells the ViewModel to save them.
+     * This method contains UI logic that should ideally be handled by a RecyclerView adapter.
      */
     private fun saveContainersFromUi() {
         val newContainers = mutableListOf<Container>()
         for (i in 0 until binding.containerList.childCount) {
             val view = binding.containerList.getChildAt(i)
-            // Rufe das Binding sicher aus dem Tag ab
+            // Retrieve the binding safely from the tag.
             val itemBinding = view.tag as? ContainerItemBinding ?: continue
 
             val name = itemBinding.containerNameInput.text.toString()

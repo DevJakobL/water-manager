@@ -1,48 +1,54 @@
 package com.dev.jakob.watermanager.data.repository
 
 import com.dev.jakob.watermanager.data.model.Container
-import com.dev.jakob.watermanager.data.model.Water // Import hinzugefügt
+import com.dev.jakob.watermanager.data.model.Water
 import com.dev.jakob.watermanager.data.source.WaterLocalDataSource
 
 /**
- * [WaterRepository] ist für die Verwaltung der Wasserdaten der Anwendung zuständig.
- * Es agiert als Vermittler zwischen der Datenquelle ([WaterLocalDataSource]) und dem Rest der Anwendung.
+ * Repository for managing all water-related data for the application.
+ * It acts as a single source of truth and abstracts the data source from the rest of the app.
  *
- * @param waterLocalDataSource Die lokale Datenquelle, die für den Zugriff auf gespeicherte Wasserdaten verwendet wird.
+ * **Note for future improvement:** The methods in this repository perform synchronous I/O operations.
+ * They should be converted to `suspend` functions to be executed on a background thread using coroutines.
+ *
+ * @property waterLocalDataSource The local data source used to access stored water data.
  */
 class WaterRepository(private val waterLocalDataSource: WaterLocalDataSource) {
 
     /**
-     * Lädt die Liste der vordefinierten Wasserbehälter aus der lokalen Datenquelle.
+     * Loads the list of predefined water containers from the local data source.
      *
-     * @return Eine veränderliche Liste von [Container]-Objekten.
+     * **Improvement suggestion:** This method should return an immutable `List<Container>`
+     * to prevent modification from outside the repository.
+     *
+     * @return A mutable list of [Container] objects.
      */
     fun loadContainers(): MutableList<Container> {
         return waterLocalDataSource.loadContainers()
     }
 
     /**
-     * Speichert eine Liste von Wasserbehältern in der lokalen Datenquelle.
+     * Saves a list of water containers to the local data source.
      *
-     * @param containers Die Liste der zu speichernden [Container]-Objekte.
+     * @param containers The list of [Container] objects to be saved.
      */
     fun saveContainers(containers: List<Container>) {
         waterLocalDataSource.saveContainers(containers)
     }
 
     /**
-     * Speichert die Liste der getrunkenen Wassermengen in der lokalen Datenquelle.
+     * Saves the list of water intake entries to the local data source.
      *
-     * @param waterList Die Liste der zu speichernden [Water]-Objekte.
+     * @param waterList The list of [Water] objects to be saved.
      */
     fun saveWaterIntake(waterList: List<Water>) {
         waterLocalDataSource.saveWaterIntake(waterList)
     }
 
     /**
-     * Lädt die Liste der getrunkenen Wassermengen aus der lokalen Datenquelle.
+     * Loads the list of water intake entries from the local data source.
      *
-     * @return Die Liste der [Water]-Objekte, oder eine leere Liste, wenn kein Wert gespeichert ist.
+     * @return The list of [Water] objects, or an empty list if no data is stored.
      */
     fun loadWaterIntake(): List<Water> {
         return waterLocalDataSource.loadWaterIntake()

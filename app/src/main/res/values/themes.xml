@@ -15,4 +15,19 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
+
+    <!-- Style for the calendar date text -->
+    <style name="CalendarDateText" parent="TextAppearance.AppCompat.Medium">
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
+    <!-- Style for the calendar header text (Month and Year) -->
+    <style name="CalendarHeaderText" parent="TextAppearance.AppCompat.Large">
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
+    <!-- Style for the calendar week day text (Mon, Tue, etc.) -->
+    <style name="CalendarWeekDayText" parent="TextAppearance.AppCompat.Medium">
+        <item name="android:textColor">@android:color/white</item>
+    </style>
 </resources>

@@ -7,6 +7,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import com.dev.jakob.watermanager.databinding.ActivityMainBinding
+import com.dev.jakob.watermanager.ui.statistics.StatisticsFragment
 import com.google.android.material.navigation.NavigationView
 
 /**
@@ -23,6 +24,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
      * Called when the activity is first created.
      * Initializes the view binding, sets up the toolbar, drawer layout, and navigation view.
      * It also loads the initial [WelcomeFragment].
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down,
+     * this Bundle contains the data it most recently supplied in [onSaveInstanceState]. Otherwise, it is null.
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +74,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.nav_home -> navigateToHome()
+            R.id.nav_statistics -> navigateToStatistics()
             R.id.nav_settings -> navigateToSettings()
         }
         binding.drawerLayout.closeDrawer(GravityCompat.START)
@@ -78,7 +83,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     /**
      * Navigates to the home screen by replacing the fragment container with [WelcomeFragment].
-     * This is the default screen of the app. It also clears the back stack.
+     * This is the default screen of the app. It also clears the back stack, making Home a top-level destination.
      */
     fun navigateToHome() {
         // Clear back stack to make Home the top-level destination
@@ -90,7 +95,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     /**
+     * Navigates to the statistics screen by replacing the fragment container with [StatisticsFragment].
+     * Adds the transaction to the back stack.
+     */
+    private fun navigateToStatistics() {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.content_frame, StatisticsFragment())
+            .addToBackStack(null) // Allows user to navigate back to the previous fragment
+            .commit()
+    }
+
+    /**
      * Navigates to the settings screen by replacing the fragment container with [SettingsFragment].
+     * Adds the transaction to the back stack.
      */
     private fun navigateToSettings() {
         supportFragmentManager.beginTransaction()

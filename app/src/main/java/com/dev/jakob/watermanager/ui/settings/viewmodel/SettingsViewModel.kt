@@ -7,40 +7,46 @@ import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.repository.WaterRepository
 
 /**
- * [SettingsViewModel] ist das ViewModel für die Einstellungen.
- * Es verwaltet die Liste der Wasserbehälter und interagiert mit dem [WaterRepository],
- * um diese zu laden und zu speichern.
+ * ViewModel for the Settings screen.
+ * It manages the list of water containers and interacts with the [WaterRepository]
+ * to load and save them.
  *
- * @param repository Das [WaterRepository], das für den Datenzugriff verwendet wird.
+ * **Note for future improvement:** This ViewModel currently uses synchronous calls to the repository.
+ * These should be replaced with asynchronous calls using `viewModelScope.launch` once the repository
+ * methods are converted to `suspend` functions.
+ *
+ * @property repository The [WaterRepository] used for data access.
  */
 class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
 
-    private val _containers = MutableLiveData<MutableList<Container>>()
+    private val _containers = MutableLiveData<List<Container>>()
     /**
-     * LiveData, die eine veränderliche Liste der Wasserbehälter enthält.
-     * Beobachter können sich hier anmelden, um über Änderungen informiert zu werden.
+     * LiveData holding the list of water containers.
+     * It exposes an immutable list to the UI to ensure data integrity.
      */
-    val containers: LiveData<MutableList<Container>> = _containers
+    val containers: LiveData<List<Container>> = _containers
 
     init {
         loadContainers()
     }
 
     /**
-     * Lädt die Liste der Wasserbehälter aus dem [WaterRepository] und aktualisiert die LiveData.
+     * Loads the list of water containers from the [WaterRepository] and updates the LiveData.
      */
     fun loadContainers() {
+        // In a coroutine-based architecture, this would be wrapped in viewModelScope.launch
         _containers.value = repository.loadContainers()
     }
 
     /**
-     * Speichert die übergebene Liste von Behältern über das [WaterRepository]
-     * und aktualisiert die LiveData.
+     * Saves the given list of containers via the [WaterRepository]
+     * and updates the LiveData.
      *
-     * @param containersToSave Die Liste der zu speichernden [Container].
+     * @param containersToSave The list of [Container] objects to be saved.
      */
     fun saveContainers(containersToSave: List<Container>) {
+        // In a coroutine-based architecture, this would be wrapped in viewModelScope.launch
         repository.saveContainers(containersToSave)
-        _containers.value = containersToSave.toMutableList()
+        _containers.value = containersToSave
     }
 }
