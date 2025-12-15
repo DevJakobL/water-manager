@@ -41,41 +41,24 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
     }
 
     /**
-     * Handles the event of text changing for a container's name.
-     * It creates a new list with the updated container and emits it to the [StateFlow].
+     * Handles the event of a container's data being updated in the UI.
+     * This function is the central point for processing user edits from the `ContainerAdapter`.
+     * It finds the corresponding container in the current state list by its unique `id`
+     * and replaces it with the updated version, preserving the list order.
+     * Finally, it emits the new, updated list to the [StateFlow], triggering a UI refresh.
      *
-     * @param containerId The ID of the container being edited. Can be null for newly added containers before saving.
-     * @param newName The new name for the container.
+     * @param updatedContainer The container with the new data.
      */
-    fun onContainerNameChanged(containerId: String, newName: String) {
+    fun onContainerUpdated(updatedContainer: Container) {
         val newList = _uiState.value.map { container ->
-            if (container.id == containerId) {
-                container.copy(name = newName) // Create a new instance with the change
+            if (container.id == updatedContainer.id) {
+                updatedContainer // Replace the old container with the updated one
             } else {
                 container
             }
         }
         _uiState.value = newList
     }
-
-    /**
-     * Handles the event of text changing for a container's size.
-     * It creates a new list with the updated container and emits it to the [StateFlow].
-     *
-     * @param containerId The ID of the container being edited. Can be null for newly added containers before saving.
-     * @param newSize The new size for the container.
-     */
-    fun onContainerSizeChanged(containerId: String, newSize: Int) {
-        val newList = _uiState.value.map { container ->
-            if (container.id == containerId) {
-                container.copy(size = newSize) // Create a new instance with the change
-            } else {
-                container
-            }
-        }
-        _uiState.value = newList
-    }
-
     /**
      * Adds a new, empty container to the UI state for the user to fill out.
      * The new container gets a automatically generated unique ID from its constructor.

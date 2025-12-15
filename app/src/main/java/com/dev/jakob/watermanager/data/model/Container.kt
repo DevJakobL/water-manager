@@ -1,5 +1,7 @@
 package com.dev.jakob.watermanager.data.model
 
+import java.util.*
+
 /**
  * Data class representing a water container.
  *
@@ -9,7 +11,7 @@ package com.dev.jakob.watermanager.data.model
  * @property size The capacity of the container in milliliters.
  */
 data class Container(
-    val id: String, // Make nullable, default for new containers
+    val id: String = UUID.randomUUID().toString(), // Make nullable, default for new containers
     val name: String,
     val size: Int
 )
