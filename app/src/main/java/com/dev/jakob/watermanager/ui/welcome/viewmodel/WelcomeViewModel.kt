@@ -1,97 +1,98 @@
 package com.dev.jakob.watermanager.ui.welcome.viewmodel
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.model.Water
 import com.dev.jakob.watermanager.data.repository.WaterRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * ViewModel for the Welcome screen.
- * It manages UI-related data and business logic for displaying the total water intake
- * and the available water containers.
+ * Represents the UI state for the Welcome screen.
  *
- * **Note for future improvement:** This ViewModel currently uses synchronous calls to the repository.
- * These should be replaced with asynchronous calls using `viewModelScope.launch` once the repository
- * methods are converted to `suspend` functions.
+ * @param totalWaterToday The total amount of water consumed today.
+ * @param containers The list of available containers.
+ */
+data class WelcomeUiState(
+    val totalWaterToday: Int = 0,
+    val containers: List<Container> = emptyList()
+)
+
+/**
+ * ViewModel for the Welcome screen, following modern Android architecture principles.
+ * It manages the UI state and handles business logic for the welcome screen.
  *
- * @property repository The [WaterRepository] used for data access.
+ * @property repository The [WaterRepository] for data access.
  */
 class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
 
-    private val _waterIntakeList = MutableLiveData<List<Water>>()
-    /**
-     * LiveData holding a list of all [Water] intake entries.
-     * Observers can subscribe to be notified of changes.
-     */
-    val waterIntakeList: LiveData<List<Water>> = _waterIntakeList
+    private val _uiState = MutableStateFlow(WelcomeUiState())
+    val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()
 
-    /**
-     * LiveData holding the total water consumed today in milliliters.
-     * This value is calculated from [waterIntakeList] for the current day.
-     */
-    val totalWaterToday: MediatorLiveData<Int> = MediatorLiveData()
-
-    private val _containers = MutableLiveData<List<Container>>()
-    /**
-     * LiveData holding a list of available water containers.
-     * Observers can subscribe to be notified of changes.
-     */
-    val containers: LiveData<List<Container>> = _containers
+    // Keep a private copy of the full water intake list to avoid re-loading it constantly.
+    private var fullWaterIntakeList: List<Water> = emptyList()
 
     init {
-        // Observe _waterIntakeList and update totalWaterToday whenever it changes.
-        totalWaterToday.addSource(_waterIntakeList) { waterList ->
-            // Den heutigen Tag in der Standard-Zeitzone des Geräts ermitteln
-            val today = LocalDate.now(ZoneId.systemDefault())
-
-            val sum = waterList.filter { water ->
-                // Den gespeicherten UTC-Zeitstempel in ein Datum in der lokalen Zeitzone umwandeln
-                val entryDate = Instant.ofEpochMilli(water.timestamp)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-                // Vergleichen, ob die Daten übereinstimmen
-                entryDate.isEqual(today)
-            }.sumOf { it.amount }
-
-            totalWaterToday.value = sum
-        }
         loadInitialData()
     }
 
     /**
-     * Loads the initial data for containers and water intake from the [WaterRepository].
+     * Loads the initial data for containers and water intake from the repository asynchronously.
      */
     private fun loadInitialData() {
-        // In a coroutine-based architecture, this would be wrapped in viewModelScope.launch
-        _containers.value = repository.loadContainers()
-        _waterIntakeList.value = repository.loadWaterIntake()
+        viewModelScope.launch {
+            fullWaterIntakeList = repository.loadWaterIntake()
+            val containers = repository.loadContainers()
+            updateUiState(fullWaterIntakeList, containers)
+        }
     }
 
     /**
-     * Adds the water amount from a specific container to the intake list
-     * and saves the updated list via the [WaterRepository].
+     * Adds a new water intake entry and saves it.
      *
-     * @param container The [Container] whose water amount should be added.
+     * @param container The [Container] that was used.
      */
     fun addWater(container: Container) {
-        val currentList = _waterIntakeList.value.orEmpty().toMutableList()
-        val newWaterEntry = Water(container.name, container.size, System.currentTimeMillis())
-        currentList.add(newWaterEntry)
-        _waterIntakeList.value = currentList
+        viewModelScope.launch {
+            val newWaterEntry = Water(container.name, container.size, System.currentTimeMillis())
+            val updatedList = fullWaterIntakeList + newWaterEntry
+            repository.saveWaterIntake(updatedList)
 
-        // In a coroutine-based architecture, this would be wrapped in viewModelScope.launch
-        repository.saveWaterIntake(currentList)
+            // Update the local list and UI state
+            fullWaterIntakeList = updatedList
+            updateUiState(fullWaterIntakeList, uiState.value.containers)
+        }
+    }
+
+    /**
+     * Recalculates the UI state based on the latest data.
+     */
+    private fun updateUiState(waterList: List<Water>, containers: List<Container>) {
+        val today = LocalDate.now(ZoneId.systemDefault())
+        val sumToday = waterList.filter { water ->
+            Instant.ofEpochMilli(water.timestamp)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .isEqual(today)
+        }.sumOf { it.amount }
+
+        _uiState.update {
+            it.copy(
+                totalWaterToday = sumToday,
+                containers = containers
+            )
+        }
     }
 
     /**
      * Refreshes the data by reloading it from the repository.
-     * This is useful when data might have been changed externally (e.g., in the Settings screen).
      */
     fun refreshData() {
         loadInitialData()

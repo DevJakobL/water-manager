@@ -49,6 +49,9 @@ dependencies {
     implementation("com.github.prolificinteractive:material-calendarview:2.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
+    // Navigation Component
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
 
     // Koin
     implementation(libs.koin.android)

@@ -3,54 +3,59 @@ package com.dev.jakob.watermanager.data.repository
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.model.Water
 import com.dev.jakob.watermanager.data.source.WaterLocalDataSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Repository for managing all water-related data for the application.
  * It acts as a single source of truth and abstracts the data source from the rest of the app.
- *
- * **Note for future improvement:** The methods in this repository perform synchronous I/O operations.
- * They should be converted to `suspend` functions to be executed on a background thread using coroutines.
+ * It ensures that all I/O operations are performed off the main thread using coroutines.
  *
  * @property waterLocalDataSource The local data source used to access stored water data.
  */
 class WaterRepository(private val waterLocalDataSource: WaterLocalDataSource) {
 
     /**
-     * Loads the list of predefined water containers from the local data source.
+     * Loads the list of predefined water containers from the local data source on a background thread.
      *
-     * **Improvement suggestion:** This method should return an immutable `List<Container>`
-     * to prevent modification from outside the repository.
-     *
-     * @return A mutable list of [Container] objects.
+     * @return An immutable list of [Container] objects.
      */
-    fun loadContainers(): MutableList<Container> {
-        return waterLocalDataSource.loadContainers()
+    suspend fun loadContainers(): List<Container> {
+        return withContext(Dispatchers.IO) {
+            waterLocalDataSource.loadContainers().toList() // Convert to immutable list
+        }
     }
 
     /**
-     * Saves a list of water containers to the local data source.
+     * Saves a list of water containers to the local data source on a background thread.
      *
      * @param containers The list of [Container] objects to be saved.
      */
-    fun saveContainers(containers: List<Container>) {
-        waterLocalDataSource.saveContainers(containers)
+    suspend fun saveContainers(containers: List<Container>) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveContainers(containers)
+        }
     }
 
     /**
-     * Saves the list of water intake entries to the local data source.
+     * Saves the list of water intake entries to the local data source on a background thread.
      *
      * @param waterList The list of [Water] objects to be saved.
      */
-    fun saveWaterIntake(waterList: List<Water>) {
-        waterLocalDataSource.saveWaterIntake(waterList)
+    suspend fun saveWaterIntake(waterList: List<Water>) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveWaterIntake(waterList)
+        }
     }
 
     /**
-     * Loads the list of water intake entries from the local data source.
+     * Loads the list of water intake entries from the local data source on a background thread.
      *
      * @return The list of [Water] objects, or an empty list if no data is stored.
      */
-    fun loadWaterIntake(): List<Water> {
-        return waterLocalDataSource.loadWaterIntake()
+    suspend fun loadWaterIntake(): List<Water> {
+        return withContext(Dispatchers.IO) {
+            waterLocalDataSource.loadWaterIntake()
+        }
     }
 }

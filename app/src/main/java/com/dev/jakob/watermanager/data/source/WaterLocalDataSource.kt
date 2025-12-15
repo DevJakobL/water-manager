@@ -7,6 +7,7 @@ import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.model.Water
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.util.*
 
 /**
  * Handles local data access, specifically for saving and loading water-related data
@@ -27,22 +28,39 @@ class WaterLocalDataSource(context: Context, private val gson: Gson) {
     /**
      * Loads the list of predefined water containers from [SharedPreferences].
      * If no containers are stored, it returns a default list.
+     * It also ensures that all loaded containers have a unique ID, assigning one if missing.
      *
-     * @return A mutable list of [Container] objects. Should be changed to return an immutable list.
+     * @return An immutable list of [Container] objects.
      */
-    fun loadContainers(): MutableList<Container> {
+    fun loadContainers(): List<Container> {
         val json = sharedPreferences.getString(KEY_CONTAINERS, null)
-        return if (json != null) {
-            val type = object : TypeToken<MutableList<Container>>() {}.type
+        val loadedContainers: List<Container> = if (json != null) {
+            val type = object : TypeToken<List<Container>>() {}.type
             gson.fromJson(json, type)
         } else {
-            // Default containers if none are saved
-            mutableListOf(
-                Container("Glass", 250),
-                Container("Bottle", 500),
-                Container("Large Bottle", 1000)
+            // Default containers if none are saved.
+            listOf(
+                Container(name = "Glass", size = 250),
+                Container(name = "Bottle", size = 500),
+                Container(name = "Large Bottle", size = 1000)
             )
         }
+
+        var needsSaving = false
+        val containersWithFixedIds = loadedContainers.map { container ->
+            if (container.id == null) {
+                needsSaving = true
+                container.copy(id = UUID.randomUUID().toString()) // Assign a new ID
+            } else {
+                container
+            }
+        }
+
+        if (needsSaving) {
+            saveContainers(containersWithFixedIds) // Save the list with new IDs
+        }
+
+        return containersWithFixedIds
     }
 
     /**

@@ -6,10 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LiveData
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.databinding.FragmentWelcomeBinding
 import com.dev.jakob.watermanager.ui.welcome.viewmodel.WelcomeViewModel
+import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
@@ -44,7 +47,7 @@ class WelcomeFragment : Fragment() {
     }
 
     /**
-     * Sets up observers on the [WelcomeViewModel]'s LiveData to update the UI
+     * Sets up observers on the [WelcomeViewModel]'s UI state to update the UI
      * whenever the data changes. This is called after the view has been created.
      *
      * @param view The View returned by [onCreateView].
@@ -52,7 +55,7 @@ class WelcomeFragment : Fragment() {
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupObservers()
+        observeViewModelState()
     }
 
     /**
@@ -73,15 +76,17 @@ class WelcomeFragment : Fragment() {
     }
 
     /**
-     * Observes [LiveData] from the [WelcomeViewModel] to update the UI.
-     * It observes the total water amount and the list of containers.
+     * Observes the UI state [StateFlow] from the [WelcomeViewModel] to update the UI.
+     * It updates the total water amount and the list of containers.
      */
-    private fun setupObservers() {
-        welcomeViewModel.totalWaterToday.observe(viewLifecycleOwner) { totalWaterAmount ->
-            updateWaterText(totalWaterAmount)
-        }
-        welcomeViewModel.containers.observe(viewLifecycleOwner) { containers ->
-            populateButtons(containers)
+    private fun observeViewModelState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                welcomeViewModel.uiState.collect { uiState ->
+                    updateWaterText(uiState.totalWaterToday)
+                    populateButtons(uiState.containers)
+                }
+            }
         }
     }
 

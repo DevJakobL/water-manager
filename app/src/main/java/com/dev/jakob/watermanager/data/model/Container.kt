@@ -1,9 +1,15 @@
 package com.dev.jakob.watermanager.data.model
 
 /**
- * Datenklasse, die einen Wasserbehälter repräsentiert.
+ * Data class representing a water container.
  *
- * @param name Der Name des Behälters (z.B. "Glas", "Flasche").
- * @param size Die Füllmenge des Behälters in Millilitern.
+ * @property id A unique identifier for the container, crucial for list operations and database persistence.
+ *              It's nullable to handle deserialization of older data that might not have an ID.
+ * @property name The name of the container (e.g., "Glass", "Bottle").
+ * @property size The capacity of the container in milliliters.
  */
-data class Container(val name: String, val size: Int)
+data class Container(
+    val id: String, // Make nullable, default for new containers
+    val name: String,
+    val size: Int
+)
