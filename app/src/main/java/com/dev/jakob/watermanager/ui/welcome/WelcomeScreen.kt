@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dev.jakob.watermanager.R
+import com.dev.jakob.watermanager.ui.components.WaterGlass // Import WaterGlass
 import com.dev.jakob.watermanager.ui.theme.WaterManagerTheme
 import com.dev.jakob.watermanager.ui.welcome.viewmodel.WelcomeViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -44,6 +45,13 @@ fun WelcomeScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // WaterGlass Composable hinzufügen
+        WaterGlass(
+            currentAmount = uiState.totalWaterToday,
+            dailyGoal = uiState.dailyGoal,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
         Text(
             text = stringResource(id = R.string.total_water_intake),
             fontSize = 24.sp,

@@ -7,7 +7,23 @@ import com.dev.jakob.watermanager.data.repository.WaterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/**
+ * Represents the UI state for the Settings screen.
+ *
+ * @param containers The list of available containers.
+ * @param bodyWeight The user's body weight in kilograms.
+ * @param calculationFactor The factor (ml/kg) used to calculate the daily goal.
+ * @param dailyGoal The calculated daily water intake goal in milliliters.
+ */
+data class SettingsUiState(
+    val containers: List<Container> = emptyList(),
+    val bodyWeight: Int = 0,
+    val calculationFactor: Int = 30, // Default to 30ml/kg
+    val dailyGoal: Int = 0
+)
 
 /**
  * ViewModel for the Settings screen, adhering to modern Android architecture principles.
@@ -21,22 +37,40 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
 
     // Private mutable state flow, the single source of truth
-    private val _uiState = MutableStateFlow<List<Container>>(emptyList())
+    private val _uiState = MutableStateFlow(SettingsUiState())
     /**
      * Public immutable [StateFlow] that the UI observes for state updates.
      */
-    val uiState: StateFlow<List<Container>> = _uiState.asStateFlow()
+    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        loadContainers()
+        loadInitialSettings()
     }
 
     /**
-     * Loads the initial list of containers from the repository asynchronously.
+     * Loads the initial settings data from the repository asynchronously.
      */
-    private fun loadContainers() {
+    private fun loadInitialSettings() {
         viewModelScope.launch {
-            _uiState.value = repository.loadContainers()
+            val containers = repository.loadContainers()
+            val bodyWeight = repository.loadBodyWeight()
+            val dailyGoal = repository.loadDailyGoal()
+
+            // Determine calculationFactor based on loaded dailyGoal and bodyWeight
+            val calculatedFactor = if (bodyWeight > 0 && dailyGoal > 0) {
+                (dailyGoal / bodyWeight).coerceIn(30, 40)
+            } else {
+                30 // Default factor
+            }
+
+            _uiState.update {
+                it.copy(
+                    containers = containers,
+                    bodyWeight = bodyWeight,
+                    calculationFactor = calculatedFactor,
+                    dailyGoal = dailyGoal
+                )
+            }
         }
     }
 
@@ -50,22 +84,27 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
      * @param updatedContainer The container with the new data.
      */
     fun onContainerUpdated(updatedContainer: Container) {
-        val newList = _uiState.value.map { container ->
-            if (container.id == updatedContainer.id) {
-                updatedContainer // Replace the old container with the updated one
-            } else {
-                container
+        _uiState.update { currentState ->
+            val newList = currentState.containers.map { container ->
+                if (container.id == updatedContainer.id) {
+                    updatedContainer // Replace the old container with the updated one
+                } else {
+                    container
+                }
             }
+            currentState.copy(containers = newList)
         }
-        _uiState.value = newList
     }
+
     /**
      * Adds a new, empty container to the UI state for the user to fill out.
      * The new container gets a automatically generated unique ID from its constructor.
      */
     fun addContainer() {
-        val newContainer = Container(name = "", size = 0)
-        _uiState.value = _uiState.value + newContainer
+        _uiState.update { currentState ->
+            val newContainer = Container(name = "", size = 0)
+            currentState.copy(containers = currentState.containers + newContainer)
+        }
     }
 
     /**
@@ -74,18 +113,58 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
      * @param container The [Container] to remove.
      */
     fun removeContainer(container: Container) {
-        _uiState.value = _uiState.value - container
+        _uiState.update { currentState ->
+            currentState.copy(containers = currentState.containers - container)
+        }
     }
 
     /**
-     * Saves the current, valid list of containers to the repository.
+     * Updates the body weight in the UI state and recalculates the daily goal.
+     *
+     * @param weight The new body weight in kilograms.
+     */
+    fun onBodyWeightChanged(weight: Int) {
+        _uiState.update { currentState ->
+            val newDailyGoal = calculateDailyGoal(weight, currentState.calculationFactor)
+            currentState.copy(bodyWeight = weight, dailyGoal = newDailyGoal)
+        }
+    }
+
+    /**
+     * Updates the calculation factor in the UI state and recalculates the daily goal.
+     *
+     * @param factor The new calculation factor (ml/kg).
+     */
+    fun onCalculationFactorChanged(factor: Int) {
+        _uiState.update { currentState ->
+            val newDailyGoal = calculateDailyGoal(currentState.bodyWeight, factor)
+            currentState.copy(calculationFactor = factor, dailyGoal = newDailyGoal)
+        }
+    }
+
+    /**
+     * Saves the current settings (containers, body weight, and daily goal) to the repository.
      * It filters out any incomplete containers before saving.
      */
-    fun saveContainers() {
+    fun saveSettings() {
         viewModelScope.launch {
+            val currentState = _uiState.value
             // Filter out containers that are not valid before saving
-            val validContainers = _uiState.value.filter { it.name.isNotBlank() && it.size > 0 }
+            val validContainers = currentState.containers.filter { it.name.isNotBlank() && it.size > 0 }
             repository.saveContainers(validContainers)
+            repository.saveBodyWeight(currentState.bodyWeight)
+            repository.saveDailyGoal(currentState.dailyGoal)
         }
+    }
+
+    /**
+     * Calculates the daily water intake goal based on body weight and a given factor.
+     *
+     * @param bodyWeight The user's body weight in kilograms.
+     * @param factor The factor (ml/kg) to use for calculation (e.g., 30 or 40).
+     * @return The calculated daily water intake goal in milliliters.
+     */
+    private fun calculateDailyGoal(bodyWeight: Int, factor: Int): Int {
+        return bodyWeight * factor
     }
 }

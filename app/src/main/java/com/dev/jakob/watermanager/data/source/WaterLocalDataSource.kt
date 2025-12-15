@@ -7,7 +7,6 @@ import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.model.Water
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import java.util.*
 
 /**
  * Handles local data access, specifically for saving and loading water-related data
@@ -46,18 +45,8 @@ class WaterLocalDataSource(context: Context, private val gson: Gson) {
             )
         }
 
-        var needsSaving = false
         val containersWithFixedIds = loadedContainers.map { container ->
-            if (container.id == null) {
-                needsSaving = true
-                container.copy(id = UUID.randomUUID().toString()) // Assign a new ID
-            } else {
-                container
-            }
-        }
-
-        if (needsSaving) {
-            saveContainers(containersWithFixedIds) // Save the list with new IDs
+            container
         }
 
         return containersWithFixedIds
@@ -98,9 +87,47 @@ class WaterLocalDataSource(context: Context, private val gson: Gson) {
         }
     }
 
+    /**
+     * Saves the daily water goal to [SharedPreferences].
+     *
+     * @param goal The daily water goal in milliliters.
+     */
+    fun saveDailyGoal(goal: Int) {
+        sharedPreferences.edit { putInt(KEY_DAILY_GOAL, goal) }
+    }
+
+    /**
+     * Loads the daily water goal from [SharedPreferences].
+     *
+     * @return The daily water goal in milliliters, or a default value of 2000 if not set.
+     */
+    fun loadDailyGoal(): Int {
+        return sharedPreferences.getInt(KEY_DAILY_GOAL, 2000) // Default to 2000ml
+    }
+
+    /**
+     * Saves the user's body weight to [SharedPreferences].
+     *
+     * @param weight The body weight in kilograms.
+     */
+    fun saveBodyWeight(weight: Int) {
+        sharedPreferences.edit { putInt(KEY_BODY_WEIGHT, weight) }
+    }
+
+    /**
+     * Loads the user's body weight from [SharedPreferences].
+     *
+     * @return The body weight in kilograms, or a default value of 70 if not set.
+     */
+    fun loadBodyWeight(): Int {
+        return sharedPreferences.getInt(KEY_BODY_WEIGHT, 70) // Default to 70kg
+    }
+
     companion object {
         private const val PREFS_NAME = "WaterManagerPrefs"
         private const val KEY_CONTAINERS = "containers"
         private const val KEY_WATER_INTAKE = "water_intake"
+        private const val KEY_DAILY_GOAL = "daily_goal"
+        private const val KEY_BODY_WEIGHT = "body_weight"
     }
 }

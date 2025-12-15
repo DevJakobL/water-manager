@@ -19,10 +19,12 @@ import java.time.ZoneId
  *
  * @param totalWaterToday The total amount of water consumed today.
  * @param containers The list of available containers.
+ * @param dailyGoal The daily water intake goal.
  */
 data class WelcomeUiState(
     val totalWaterToday: Int = 0,
-    val containers: List<Container> = emptyList()
+    val containers: List<Container> = emptyList(),
+    val dailyGoal: Int = 0
 )
 
 /**
@@ -50,7 +52,8 @@ class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
         viewModelScope.launch {
             fullWaterIntakeList = repository.loadWaterIntake()
             val containers = repository.loadContainers()
-            updateUiState(fullWaterIntakeList, containers)
+            val dailyGoal = repository.loadDailyGoal() // Load daily goal
+            updateUiState(fullWaterIntakeList, containers, dailyGoal)
         }
     }
 
@@ -67,14 +70,14 @@ class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
 
             // Update the local list and UI state
             fullWaterIntakeList = updatedList
-            updateUiState(fullWaterIntakeList, uiState.value.containers)
+            updateUiState(fullWaterIntakeList, uiState.value.containers, uiState.value.dailyGoal)
         }
     }
 
     /**
      * Recalculates the UI state based on the latest data.
      */
-    private fun updateUiState(waterList: List<Water>, containers: List<Container>) {
+    private fun updateUiState(waterList: List<Water>, containers: List<Container>, dailyGoal: Int) {
         val today = LocalDate.now(ZoneId.systemDefault())
         val sumToday = waterList.filter { water ->
             Instant.ofEpochMilli(water.timestamp)
@@ -86,7 +89,8 @@ class WelcomeViewModel(private val repository: WaterRepository) : ViewModel() {
         _uiState.update {
             it.copy(
                 totalWaterToday = sumToday,
-                containers = containers
+                containers = containers,
+                dailyGoal = dailyGoal // Update daily goal in UI state
             )
         }
     }

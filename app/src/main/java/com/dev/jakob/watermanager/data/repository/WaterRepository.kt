@@ -58,4 +58,48 @@ class WaterRepository(private val waterLocalDataSource: WaterLocalDataSource) {
             waterLocalDataSource.loadWaterIntake()
         }
     }
+
+    /**
+     * Saves the daily water goal to the local data source on a background thread.
+     *
+     * @param goal The daily water goal in milliliters.
+     */
+    suspend fun saveDailyGoal(goal: Int) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveDailyGoal(goal)
+        }
+    }
+
+    /**
+     * Loads the daily water goal from the local data source on a background thread.
+     *
+     * @return The daily water goal in milliliters.
+     */
+    suspend fun loadDailyGoal(): Int {
+        return withContext(Dispatchers.IO) {
+            waterLocalDataSource.loadDailyGoal()
+        }
+    }
+
+    /**
+     * Saves the user's body weight to the local data source on a background thread.
+     *
+     * @param weight The body weight in kilograms.
+     */
+    suspend fun saveBodyWeight(weight: Int) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveBodyWeight(weight)
+        }
+    }
+
+    /**
+     * Loads the user's body weight from the local data source on a background thread.
+     *
+     * @return The body weight in kilograms.
+     */
+    suspend fun loadBodyWeight(): Int {
+        return withContext(Dispatchers.IO) {
+            waterLocalDataSource.loadBodyWeight()
+        }
+    }
 }

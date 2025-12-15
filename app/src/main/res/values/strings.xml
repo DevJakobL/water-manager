@@ -13,4 +13,10 @@
     <string name="container_button_text">%1$s (%2$dml)</string>
     <string name="water_amount_ml">%1$d ml</string>
     <string name="water_intake_display">Wassermenge: %.1fL</string>
+    <string name="no_goal_set">Kein Ziel gesetzt</string>
+    <string name="body_weight_label">Körpergewicht</string>
+    <string name="body_weight_unit">kg</string>
+    <string name="calculation_factor_label">Berechnungsfaktor</string>
+    <string name="daily_goal_label">Tagesziel</string>
+    <string name="daily_goal_value">%1$d ml</string>
 </resources>
