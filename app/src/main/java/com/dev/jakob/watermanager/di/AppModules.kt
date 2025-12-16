@@ -1,6 +1,9 @@
 package com.dev.jakob.watermanager.di
 
+import androidx.room.Room
 import com.dev.jakob.watermanager.data.repository.WaterRepository
+import com.dev.jakob.watermanager.data.source.AppDatabase
+import com.dev.jakob.watermanager.data.source.SettingsDataStore
 import com.dev.jakob.watermanager.data.source.WaterLocalDataSource
 import com.dev.jakob.watermanager.ui.settings.viewmodel.SettingsViewModel
 import com.dev.jakob.watermanager.ui.statistics.StatisticsViewModel
@@ -10,26 +13,34 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
-/**
- * Koin-Modul für die Anwendung.
- * Hier werden alle Abhängigkeiten deklariert, die Koin bereitstellen soll.
- */
 val appModule = module {
-    // Stellt Gson als Singleton bereit
     single { Gson() }
 
-    // Stellt WaterLocalDataSource als Singleton bereit
-    single { WaterLocalDataSource(androidContext(), get()) } // 'get()' löst den Context und Gson auf
+    single {
+        Room.databaseBuilder(
+            androidContext(),
+            AppDatabase::class.java,
+            "water_manager_db"
+        ).build()
+    }
 
-    // Stellt WaterRepository als Singleton bereit
-    single { WaterRepository(get()) } // 'get()' löst WaterLocalDataSource auf
+    single { get<AppDatabase>().waterDao() }
+    single { get<AppDatabase>().containerDao() }
 
-    // Stellt WelcomeViewModel bereit. Koin injiziert automatisch das WaterRepository.
+    single { SettingsDataStore(androidContext()) }
+
+    single {
+        WaterLocalDataSource(
+            waterDao = get(),
+            containerDao = get(),
+            settingsDataStore = get(),
+            gson = get()
+        )
+    }
+
+    single { WaterRepository(get()) }
+
     viewModel { WelcomeViewModel(get()) }
-
-    // Stellt SettingsViewModel bereit. Koin injiziert automatisch das WaterRepository.
-    viewModel { SettingsViewModel(get()) }
-
-    // Stellt StatisticsViewModel bereit.
     viewModel { StatisticsViewModel(get()) }
+    viewModel { SettingsViewModel(get()) }
 }
