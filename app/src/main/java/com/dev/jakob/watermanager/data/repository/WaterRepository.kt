@@ -60,6 +60,17 @@ class WaterRepository(private val waterLocalDataSource: WaterLocalDataSource) {
     }
 
     /**
+     * Deletes a specific water intake entry from the local data source on a background thread.
+     *
+     * @param water The [Water] object to be deleted.
+     */
+    suspend fun deleteWaterIntake(water: Water) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.deleteWaterIntake(water)
+        }
+    }
+
+    /**
      * Saves the daily water goal to the local data source on a background thread.
      *
      * @param goal The daily water goal in milliliters.

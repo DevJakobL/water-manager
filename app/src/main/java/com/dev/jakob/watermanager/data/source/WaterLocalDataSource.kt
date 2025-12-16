@@ -88,6 +88,18 @@ class WaterLocalDataSource(context: Context, private val gson: Gson) {
     }
 
     /**
+     * Deletes a specific water intake entry from [SharedPreferences].
+     * It loads the current list, removes the specified [Water] object, and saves the updated list.
+     *
+     * @param water The [Water] object to be deleted.
+     */
+    fun deleteWaterIntake(water: Water) {
+        val currentList = loadWaterIntake().toMutableList()
+        currentList.remove(water)
+        saveWaterIntake(currentList)
+    }
+
+    /**
      * Saves the daily water goal to [SharedPreferences].
      *
      * @param goal The daily water goal in milliliters.
