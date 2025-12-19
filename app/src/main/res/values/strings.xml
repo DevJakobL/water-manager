@@ -19,4 +19,37 @@
     <string name="calculation_factor_label">Berechnungsfaktor</string>
     <string name="daily_goal_label">Tagesziel</string>
     <string name="daily_goal_value">%1$d ml</string>
+
+    <!-- New Strings for Redesigned WelcomeScreen -->
+    <string name="daily_goal_display">Tagesziel: %1$d ml</string>
+    <string name="hydration_info_text">Mehr trinken ist meist unkritisch, hör auf dein Durstgefühl.</string>
+    <string name="add_drink_button">Trinken hinzufügen</string>
+    <string name="container_chip_text">%1$s %2$d ml</string>
+    <string name="overhydration_warning_icon">Warn-Icon für Überhydration</string>
+    <string name="goal_reached_optional_info">Ziel erreicht, mehr ist optional.</string>
+
+    <!-- New Strings for Redesigned StatisticsScreen -->
+    <string name="average_intake">Ø Trinkmenge</string>
+    <string name="goal_met_days">Tage am Ziel</string>
+    <string name="extra_hydrated_days">Extra gut hydriert</string>
+    <string name="intake_amount">Getrunken</string>
+    <string name="daily_goal">Tagesziel</string>
+    <string name="difference">Differenz</string>
+    <string name="overhydration_warning_message">An diesem Tag hast du deutlich mehr getrunken. Wenn du Herz‑ oder Nierenprobleme hast, sprich mit deinem Arzt.</string>
+    <string name="entries">Einträge</string>
+    <string name="delete_entry">Eintrag löschen</string>
+    <string name="select_container">Gefäß auswählen</string>
+
+    <!-- Strings for SettingsScreen -->
+    <string name="new_container">Neues Gefäß</string>
+    <string name="vessels">Gefäße</string>
+    <string name="body_weight_in_kg">Körpergewicht in kg</string>
+    <string name="calculation_factor">Berechnungsfaktor</string>
+    <string name="daily_goal_info_text">Das ist ein Richtwert. Je nach Aktivität, Temperatur und Gesundheit kann mehr oder weniger nötig sein.</string>
+    <string name="edit_container">Gefäß bearbeiten</string>
+    <string name="delete_container">Gefäß löschen</string>
+    <string name="container_name">Name des Gefäßes</string>
+    <string name="container_size_ml">Größe des Gefäßes (ml)</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="calculation">Berechnung</string>
 </resources>

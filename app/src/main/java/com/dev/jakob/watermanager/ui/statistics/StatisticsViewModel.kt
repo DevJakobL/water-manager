@@ -12,12 +12,14 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.*
 
-data class CalendarData(val date: Date, val amount: Float)
+data class CalendarData(val date: Date, val amount: Int)
 
 data class StatisticsUiState(
     val calendarData: List<CalendarData> = emptyList(),
     val selectedDayWaterIntake: List<Water> = emptyList(),
-    val containers: List<Container> = emptyList()
+    val containers: List<Container> = emptyList(),
+    val weeklySummary: WeeklySummary = WeeklySummary(0, 0, 0),
+    val dailyGoal: Int = 0
 )
 
 class StatisticsViewModel(private val waterRepository: WaterRepository) : ViewModel() {
@@ -30,30 +32,41 @@ class StatisticsViewModel(private val waterRepository: WaterRepository) : ViewMo
         combine(
             waterRepository.getAllWaterIntake(),
             waterRepository.getAllContainers(),
+            waterRepository.getDailyGoal(),
             _selectedDate
-        ) { allWaterIntake, containers, selectedDate ->
-            val calendarData = allWaterIntake
-                .groupBy { water ->
-                    Instant.ofEpochMilli(water.timestamp)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate()
-                }
-                .map { (date, dailyWaterEntries) ->
-                    val totalAmount = dailyWaterEntries.sumOf { it.amount }.toFloat()
-                    val dateAsJavaUtilDate = Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant())
-                    CalendarData(dateAsJavaUtilDate, totalAmount)
-                }
-
-            val selectedDayIntake = allWaterIntake.filter { water ->
-                Instant.ofEpochMilli(water.timestamp)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate() == selectedDate
+        ) { allWaterIntake, containers, dailyGoal, selectedDate ->
+            val groupedByDay = allWaterIntake.groupBy { water ->
+                Instant.ofEpochMilli(water.timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
             }
+
+            val calendarData = groupedByDay.map { (date, entries) ->
+                val totalAmount = entries.sumOf { it.amount }
+                CalendarData(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()), totalAmount)
+            }
+
+            val selectedDayIntake = groupedByDay[selectedDate] ?: emptyList()
+
+            // Calculate Weekly Summary
+            val today = LocalDate.now()
+            val startOfWeek = today.minusDays(today.dayOfWeek.value.toLong() - 1)
+            val weekEntries = allWaterIntake.filter {
+                val entryDate = Instant.ofEpochMilli(it.timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+                !entryDate.isBefore(startOfWeek) && !entryDate.isAfter(today)
+            }
+            val weekIntakeByDay = weekEntries.groupBy {
+                Instant.ofEpochMilli(it.timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+            }.mapValues { it.value.sumOf { entry -> entry.amount } }
+
+            val averageIntake = if (weekIntakeByDay.isNotEmpty()) weekIntakeByDay.values.average().toInt() else 0
+            val goalMetDays = weekIntakeByDay.count { it.value >= dailyGoal }
+            val extraHydratedDays = weekIntakeByDay.count { it.value >= dailyGoal * 1.2 }
 
             StatisticsUiState(
                 calendarData = calendarData,
                 containers = containers,
-                selectedDayWaterIntake = selectedDayIntake
+                selectedDayWaterIntake = selectedDayIntake,
+                weeklySummary = WeeklySummary(averageIntake, goalMetDays, extraHydratedDays),
+                dailyGoal = dailyGoal
             )
         }.onEach { newState ->
             _uiState.value = newState

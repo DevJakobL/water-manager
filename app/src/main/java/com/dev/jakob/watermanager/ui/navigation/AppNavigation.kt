@@ -39,7 +39,9 @@ fun AppNavigation(
             WelcomeScreen()
         }
         composable(AppRoutes.STATISTICS) {
-            StatisticsScreen()
+            StatisticsScreen(
+                onNavigateUp = { navController.popBackStack() }
+            )
         }
         composable(AppRoutes.SETTINGS) {
             SettingsScreen(

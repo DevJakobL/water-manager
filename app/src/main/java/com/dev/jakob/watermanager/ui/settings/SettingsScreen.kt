@@ -1,189 +1,170 @@
 package com.dev.jakob.watermanager.ui.settings
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
+import android.content.res.Configuration
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.dev.jakob.watermanager.R
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.ui.settings.viewmodel.SettingsViewModel
+import com.dev.jakob.watermanager.ui.theme.WaterManagerTheme
 import org.koin.androidx.compose.koinViewModel
+import kotlin.math.roundToInt
 
 /**
- * Ein Composable-Bildschirm zum Verwalten der Liste der Wasserbehälter und der täglichen Zieleinstellungen.
+ * Datenklasse, die eine einzelne Einstellungsseite repräsentiert.
+ * Macht die Einstellungsnavigation leicht erweiterbar.
  *
- * Dieser Bildschirm zeigt eine Liste von Behältern an und ermöglicht es dem Benutzer,
- * sie zu bearbeiten, zu entfernen und neue hinzuzufügen. Außerdem können Benutzer
- * ihr Körpergewicht und einen Berechnungsfaktor eingeben, um das tägliche Wasserziel
- * automatisch zu berechnen. Er folgt dem Unidirectional Data Flow (UDF)-Muster,
- * indem er den Zustand vom [SettingsViewModel] beobachtet und Benutzeraktionen
- * an das ViewModel weiterleitet.
- *
- * @param onNavigateUp Lambda-Funktion, die aufgerufen wird, wenn nach oben navigiert werden soll.
- * @param viewModel Das ViewModel, das die Zustandslogik für diesen Bildschirm bereitstellt.
+ * @param route Die eindeutige Route für die Navigation.
+ * @param labelResId Die String-Ressourcen-ID für den Titel der Seite.
+ * @param icon Das Icon, das in der Navigationsleiste angezeigt wird.
+ * @param content Der Composable-Inhalt der Seite.
  */
+data class SettingPage(
+    val route: String,
+    @StringRes val labelResId: Int,
+    val icon: ImageVector,
+    val content: @Composable () -> Unit
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateUp: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState() // Observe SettingsUiState
+    val uiState by viewModel.uiState.collectAsState()
+    val navController = rememberNavController()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Body Weight Input
-        Text(
-            text = stringResource(id = R.string.body_weight_label),
-            fontSize = 20.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        TextField(
-            value = if (uiState.bodyWeight > 0) uiState.bodyWeight.toString() else "",
-            onValueChange = { newValue ->
-                val weight = newValue.toIntOrNull() ?: 0
-                viewModel.onBodyWeightChanged(weight)
-            },
-            label = { Text(stringResource(id = R.string.body_weight_unit)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+    // Zustand für den Container-Bearbeitungsdialog
+    var showContainerDialog by remember { mutableStateOf(false) }
+    var editingContainer by remember { mutableStateOf<Container?>(null) }
 
-        // Calculation Factor Selection
-        Text(
-            text = stringResource(id = R.string.calculation_factor_label),
-            fontSize = 20.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val factors = listOf(30, 40)
-            factors.forEach { factor ->
-                FilterChip(
-                    selected = uiState.calculationFactor == factor,
-                    onClick = { viewModel.onCalculationFactorChanged(factor) },
-                    label = { Text("$factor ml/kg") }
-                )
-            }
+    // Speichern der Einstellungen, wenn der Screen verlassen wird
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.saveSettings()
         }
-        Spacer(modifier = Modifier.height(16.dp))
+    }
 
-        // Display Daily Goal
-        Text(
-            text = stringResource(id = R.string.daily_goal_label),
-            fontSize = 20.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Text(
-            text = stringResource(id = R.string.daily_goal_value, uiState.dailyGoal),
-            fontSize = 24.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-
-        // Existing Container Configuration
-        Text(
-            text = stringResource(id = R.string.configure_containers),
-            fontSize = 20.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        LazyColumn(
-            modifier = Modifier.weight(1f)
-        ) {
-            items(uiState.containers) { container -> // Use uiState.containers
-                ContainerItem(
-                    container = container,
-                    onContainerChanged = { updatedContainer ->
-                        viewModel.onContainerUpdated(updatedContainer)
+    // Liste der Einstellungsseiten. Leicht erweiterbar durch Hinzufügen neuer SettingPage-Objekte.
+    val settingPages = listOf(
+        SettingPage(
+            route = "calculation",
+            labelResId = R.string.calculation,
+            icon = Icons.Filled.Calculate,
+            content = {
+                CalculationScreen(
+                    uiState = uiState,
+                    onWeightChange = { weightString ->
+                        viewModel.onBodyWeightChanged(weightString.toIntOrNull() ?: 0)
                     },
-                    onRemoveClicked = {
-                        viewModel.removeContainer(container)
+                    onFactorChange = { factor ->
+                        viewModel.onCalculationFactorChanged(factor.roundToInt())
                     }
                 )
             }
-        }
+        ),
+        SettingPage(
+            route = "vessels",
+            labelResId = R.string.vessels,
+            icon = Icons.Filled.LocalDrink,
+            content = {
+                VesselsScreen(
+                    uiState = uiState,
+                    onAddContainer = {
+                        editingContainer = Container(name = "", size = 0)
+                        showContainerDialog = true
+                    },
+                    onEditContainer = { container ->
+                        editingContainer = container
+                        showContainerDialog = true
+                    },
+                    onDeleteContainer = viewModel::removeContainer
+                )
+            }
+        )
+    )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.menu_settings)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück")
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            SettingsBottomNav(navController = navController, pages = settingPages)
+        }
+    ) { paddingValues ->
+        NavHost(
+            navController = navController,
+            startDestination = settingPages.first().route,
+            modifier = Modifier.padding(paddingValues)
         ) {
-            Button(onClick = { viewModel.addContainer() }) {
-                Text(text = stringResource(id = R.string.add_container))
+            settingPages.forEach { page ->
+                composable(page.route) {
+                    page.content()
+                }
             }
-            Button(onClick = {
-                viewModel.saveSettings() // Call saveSettings()
-                onNavigateUp()
-            }) {
-                Text(text = stringResource(id = R.string.save))
+        }
+    }
+
+    if (showContainerDialog) {
+        ContainerEditDialog(
+            container = editingContainer ?: Container(name = "", size = 0),
+            onDismiss = { showContainerDialog = false },
+            onConfirm = { updatedContainer ->
+                viewModel.onContainerUpdated(updatedContainer)
+                showContainerDialog = false
             }
+        )
+    }
+}
+
+@Composable
+private fun SettingsBottomNav(navController: NavController, pages: List<SettingPage>) {
+    NavigationBar {
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+        pages.forEach { page ->
+            NavigationBarItem(
+                icon = { Icon(page.icon, contentDescription = null) },
+                label = { Text(stringResource(page.labelResId)) },
+                selected = currentRoute == page.route,
+                onClick = {
+                    navController.navigate(page.route) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
     }
 }
 
-/**
- * Ein Composable, das ein einzelnes Behälterelement in der Liste anzeigt.
- *
- * @param container Der anzuzeigende Behälter.
- * @param onContainerChanged Lambda, das aufgerufen wird, wenn der Name oder die Größe des Behälters geändert wird.
- * @param onRemoveClicked Lambda, das aufgerufen wird, wenn auf die Schaltfläche "Entfernen" geklickt wird.
- */
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, name = "Dark Mode")
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO, name = "Light Mode")
 @Composable
-fun ContainerItem(
-    container: Container,
-    onContainerChanged: (Container) -> Unit,
-    onRemoveClicked: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        TextField(
-            value = container.name,
-            onValueChange = { newName ->
-                onContainerChanged(container.copy(name = newName))
-            },
-            label = { Text("Name") },
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        TextField(
-            value = container.size.toString(),
-            onValueChange = { newSize ->
-                val size = newSize.toIntOrNull() ?: 0
-                onContainerChanged(container.copy(size = size))
-            },
-            label = { Text("Size (ml)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(0.5f)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Button(onClick = onRemoveClicked) {
-            Text(text = "X")
-        }
+fun SettingsScreenPreview() {
+    WaterManagerTheme {
+        SettingsScreen(onNavigateUp = {})
     }
 }

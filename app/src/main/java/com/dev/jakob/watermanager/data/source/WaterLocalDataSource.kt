@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
  * @property waterDao The Room DAO for Water entities.
  * @property containerDao The Room DAO for Container entities.
  * @property settingsDataStore The DataStore for user settings.
+ * @property gson Behalten, falls es noch woanders verwendet wird, sonst entfernen
  */
 class WaterLocalDataSource(
     private val waterDao: WaterDao,
@@ -28,7 +29,13 @@ class WaterLocalDataSource(
 
     // Containers
     fun getAllContainers(): Flow<List<Container>> = containerDao.getAllContainers()
-    suspend fun insertContainer(container: Container) = containerDao.insertContainer(container)
+    /**
+     * Fügt einen neuen Container ein oder aktualisiert einen bestehenden.
+     *
+     * @param container Der einzufügende oder zu aktualisierende Container.
+     * @return Die ID des eingefügten oder aktualisierten Containers.
+     */
+    suspend fun insertContainer(container: Container): Long = containerDao.insertContainer(container)
     suspend fun deleteContainer(container: Container) = containerDao.deleteContainer(container)
 
     // --- DataStore-Zugriffe ---

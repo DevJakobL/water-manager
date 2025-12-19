@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Default Theme Colors -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -7,4 +8,14 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Water Tracker Theme Colors -->
+    <color name="water_blue_light">#64B5F6</color> <!-- Ruhiges Wasser-Blau für den Ring -->
+    <color name="water_blue_dark">#1976D2</color> <!-- Dunkleres Blau für Kontraste -->
+    <color name="warning_orange">#FFA726</color>   <!-- Orange für den "Über 100%"-Zustand -->
+    <color name="extra_hydrated_green">#66BB6A</color> <!-- Grün/Türkis für "Extra gut hydriert" -->
+    <color name="dark_background">#121212</color>   <!-- Standard-Dunkel-Theme Hintergrund -->
+    <color name="dark_surface">#1E1E1E</color>      <!-- Oberfläche für Karten, Sheets etc. -->
+    <color name="dark_on_primary">#FFFFFF</color>   <!-- Text auf primärer Farbe -->
+    <color name="dark_on_surface">#E0E0E0</color>   <!-- Heller Text auf dunklem Hintergrund -->
 </resources>
