@@ -2,9 +2,10 @@ package com.dev.jakob.watermanager.ui.settings
 
 import android.content.res.Configuration
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material3.*
@@ -13,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -100,19 +100,37 @@ fun SettingsScreen(
         )
     )
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val selectedTabIndex = settingPages.indexOfFirst { it.route == currentRoute }.takeIf { it != -1 } ?: 0
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.menu_settings)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück")
+            Column {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.menu_settings)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateUp) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        }
+                    }
+                )
+                TabRow(selectedTabIndex = selectedTabIndex) {
+                    settingPages.forEachIndexed { index, page ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = {
+                                navController.navigate(page.route) {
+                                    popUpTo(navController.graph.startDestinationId)
+                                    launchSingleTop = true
+                                }
+                            },
+                            text = { Text(stringResource(page.labelResId)) },
+                            icon = { Icon(page.icon, contentDescription = null) }
+                        )
                     }
                 }
-            )
-        },
-        bottomBar = {
-            SettingsBottomNav(navController = navController, pages = settingPages)
+            }
         }
     ) { paddingValues ->
         NavHost(
@@ -137,26 +155,6 @@ fun SettingsScreen(
                 showContainerDialog = false
             }
         )
-    }
-}
-
-@Composable
-private fun SettingsBottomNav(navController: NavController, pages: List<SettingPage>) {
-    NavigationBar {
-        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-        pages.forEach { page ->
-            NavigationBarItem(
-                icon = { Icon(page.icon, contentDescription = null) },
-                label = { Text(stringResource(page.labelResId)) },
-                selected = currentRoute == page.route,
-                onClick = {
-                    navController.navigate(page.route) {
-                        popUpTo(navController.graph.startDestinationId)
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
     }
 }
 

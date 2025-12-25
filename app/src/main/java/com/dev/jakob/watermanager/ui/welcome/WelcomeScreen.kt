@@ -1,5 +1,6 @@
 package com.dev.jakob.watermanager.ui.welcome
 
+import android.app.Activity
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -9,6 +10,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,6 +23,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +37,7 @@ import java.util.*
  *
  * @param welcomeViewModel Das ViewModel, das den Zustand und die Geschäftslogik bereitstellt.
  */
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun WelcomeScreen(
     welcomeViewModel: WelcomeViewModel = koinViewModel()
@@ -43,17 +49,23 @@ fun WelcomeScreen(
         0f
     }
 
+    // WindowSizeClass berechnen, um das Layout anzupassen
+    val context = LocalContext.current
+    val windowSizeClass = calculateWindowSizeClass(context as Activity)
+
     WelcomeScreenContent(
         progress = progress,
         totalWaterToday = uiState.totalWaterToday,
         dailyGoal = uiState.dailyGoal,
         containers = uiState.containers,
-        onAddWater = { container -> welcomeViewModel.addWater(container) }
+        onAddWater = { container -> welcomeViewModel.addWater(container) },
+        widthSizeClass = windowSizeClass.widthSizeClass
     )
 }
 
 /**
  * Die zustandslose Composable-Funktion, die die UI für den WelcomeScreen darstellt.
+ * Passt das Layout basierend auf der Breite des Bildschirms an.
  */
 @Composable
 private fun WelcomeScreenContent(
@@ -61,78 +73,192 @@ private fun WelcomeScreenContent(
     totalWaterToday: Int,
     dailyGoal: Int,
     containers: List<Container>,
-    onAddWater: (Container) -> Unit
+    onAddWater: (Container) -> Unit,
+    widthSizeClass: WindowWidthSizeClass
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF101319)
     ) {
+        if (widthSizeClass == WindowWidthSizeClass.Compact) {
+            // Layout für Smartphones (Portrait)
+            CompactLayout(
+                progress = progress,
+                totalWaterToday = totalWaterToday,
+                dailyGoal = dailyGoal,
+                containers = containers,
+                onAddWater = onAddWater
+            )
+        } else {
+            // Layout für Tablets und Landscape (Expanded/Medium)
+            ExpandedLayout(
+                progress = progress,
+                totalWaterToday = totalWaterToday,
+                dailyGoal = dailyGoal,
+                containers = containers,
+                onAddWater = onAddWater
+            )
+        }
+    }
+}
+
+/**
+ * Layout für kompakte Bildschirme (Smartphones im Hochformat).
+ */
+@Composable
+private fun CompactLayout(
+    progress: Float,
+    totalWaterToday: Int,
+    dailyGoal: Int,
+    containers: List<Container>,
+    onAddWater: (Container) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Hauptinhaltsbereich mit 78% der Höhe
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .weight(0.78f)
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Hauptinhaltsbereich mit 78% der Höhe
-            Column(
+            Text(
+                text = "Tagesziel: ${formatWaterAmount(dailyGoal)}",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CircularProgressRing(
+                progress = progress,
+                currentAmount = totalWaterToday,
                 modifier = Modifier
-                    .weight(0.78f)
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Tagesziel: ${formatWaterAmount(dailyGoal)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
-                )
+                    .fillMaxWidth(0.75f)
+                    .aspectRatio(1f)
+            )
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-                CircularProgressRing(
-                    progress = progress,
-                    currentAmount = totalWaterToday,
-                    modifier = Modifier
-                        .fillMaxWidth(0.75f)
-                        .aspectRatio(1f)
-                )
+            Text(
+                text = "Mehr trinken ist meist unkritisch, hör auf dein Durstgefühl.",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = Color.Gray,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+        }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Mehr trinken ist meist unkritisch, hör auf dein Durstgefühl.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(horizontal = 32.dp)
-                )
-            }
-
-            // Unterer Bereich mit 22% der Höhe, vertikal scrollbar
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .weight(0.22f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(containers) { container ->
-                    OutlinedButton(
-                        onClick = { onAddWater(container) },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "${container.name} ${container.size} ml",
-                            textAlign = TextAlign.Center // Text zentrieren für Umbruch
-                        )
-                    }
-                }
+        // Unterer Bereich mit 22% der Höhe, vertikal scrollbar
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .weight(0.22f)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(containers) { container ->
+                ContainerButton(container = container, onClick = { onAddWater(container) })
             }
         }
+    }
+}
+
+/**
+ * Layout für breitere Bildschirme (Tablets, Landscape).
+ * Teilt den Bildschirm in zwei Spalten: Links der Fortschritt, rechts die Buttons.
+ */
+@Composable
+private fun ExpandedLayout(
+    progress: Float,
+    totalWaterToday: Int,
+    dailyGoal: Int,
+    containers: List<Container>,
+    onAddWater: (Container) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxSize(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Linke Spalte: Fortschrittsanzeige (50% Breite)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Tagesziel: ${formatWaterAmount(dailyGoal)}",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            CircularProgressRing(
+                progress = progress,
+                currentAmount = totalWaterToday,
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Mehr trinken ist meist unkritisch, hör auf dein Durstgefühl.",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = Color.Gray
+            )
+        }
+
+        // Rechte Spalte: Container-Buttons (50% Breite)
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 150.dp),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            contentPadding = PaddingValues(32.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(containers) { container ->
+                ContainerButton(
+                    container = container,
+                    onClick = { onAddWater(container) },
+                    modifier = Modifier.height(80.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContainerButton(
+    container: Container,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = Color.White
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "${container.name} ${container.size} ml",
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -153,24 +279,36 @@ private fun CircularProgressRing(
 
     val ringColor = MaterialTheme.colorScheme.primary
 
-    Box(
+    BoxWithConstraints(
         contentAlignment = Alignment.Center,
         modifier = modifier
     ) {
-        val backgroundColor = Color.DarkGray
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = size.width * 0.1f // Proportionale Strichstärke
-            val diameter = size.width - strokeWidth
-            val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+        // Verwende constraints.maxWidth und constraints.maxHeight statt maxWidth/maxHeight direkt
+        // um sicherzustellen, dass wir Pixelwerte für Berechnungen haben, wenn nötig,
+        // aber hier nutzen wir die Dp-Eigenschaften des Scopes.
+        
+        // Der Fehler "BoxWithConstraints scope is not used" tritt auf, wenn man die Eigenschaften des Scopes
+        // (maxWidth, maxHeight, constraints) nicht verwendet. Wir verwenden sie hier:
+        val size = minOf(maxWidth, maxHeight)
+        
+        val strokeWidth = size * 0.1f // Proportionale Strichstärke
+        
+        // Canvas benötigt eine feste Größe oder Modifier.fillMaxSize()
+        // Da wir size berechnet haben, nutzen wir diese.
+        Canvas(modifier = Modifier.size(size)) {
+            val canvasStrokeWidth = size.toPx() * 0.1f
+            val canvasDiameter = size.toPx() - canvasStrokeWidth
+            val canvasTopLeft = Offset(canvasStrokeWidth / 2, canvasStrokeWidth / 2)
+            val canvasSize = Size(canvasDiameter, canvasDiameter)
 
             drawArc(
-                color = backgroundColor,
+                color = Color.DarkGray,
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                size = Size(diameter, diameter),
-                topLeft = topLeft
+                style = Stroke(width = canvasStrokeWidth, cap = StrokeCap.Round),
+                size = canvasSize,
+                topLeft = canvasTopLeft
             )
 
             drawArc(
@@ -178,9 +316,9 @@ private fun CircularProgressRing(
                 startAngle = -90f,
                 sweepAngle = 360f * animatedProgress,
                 useCenter = false,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                size = Size(diameter, diameter),
-                topLeft = topLeft
+                style = Stroke(width = canvasStrokeWidth, cap = StrokeCap.Round),
+                size = canvasSize,
+                topLeft = canvasTopLeft
             )
         }
 
@@ -188,17 +326,22 @@ private fun CircularProgressRing(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Schriftgröße dynamisch anpassen, basierend auf der verfügbaren Größe
+            val fontSize = (size.value * 0.2f).sp
+            
             Text(
                 text = formatWaterAmount(currentAmount),
                 style = MaterialTheme.typography.displayLarge,
                 color = ringColor,
-                fontSize = 56.sp
+                fontSize = fontSize,
+                lineHeight = fontSize
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(size * 0.02f))
             Text(
                 text = "${(progress * 100).toInt()}%",
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
+                color = Color.White,
+                fontSize = fontSize * 0.4f
             )
         }
     }

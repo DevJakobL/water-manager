@@ -1,5 +1,6 @@
 package com.dev.jakob.watermanager.ui.statistics
 
+import android.app.Activity
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,11 +15,15 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,7 +68,7 @@ data class DayData(
  * Der Hauptbildschirm für die Anzeige von Trinkstatistiken (zustandsbehaftet).
  * @param onNavigateUp Callback, um in der Navigation eine Ebene nach oben zu gehen.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun StatisticsScreen(
     onNavigateUp: () -> Unit,
@@ -84,6 +89,9 @@ fun StatisticsScreen(
             entries = if (selectedDay?.date == date) uiState.selectedDayWaterIntake else emptyList()
         )
     }
+
+    val context = LocalContext.current
+    val windowSizeClass = calculateWindowSizeClass(context as Activity)
 
     StatisticsScreenContent(
         uiState = uiState,
@@ -108,7 +116,8 @@ fun StatisticsScreen(
         onDeleteWater = { water ->
             viewModel.deleteWaterIntake(water)
         },
-        onNavigateUp = onNavigateUp
+        onNavigateUp = onNavigateUp,
+        widthSizeClass = windowSizeClass.widthSizeClass
     )
 }
 
@@ -126,7 +135,8 @@ private fun StatisticsScreenContent(
     onDismissBottomSheet: () -> Unit,
     onAddWater: (Container) -> Unit,
     onDeleteWater: (Water) -> Unit,
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
+    widthSizeClass: WindowWidthSizeClass
 ) {
     Scaffold(
         topBar = {
@@ -140,20 +150,44 @@ private fun StatisticsScreenContent(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            WeeklySummaryCard(summary = uiState.weeklySummary)
-            Spacer(modifier = Modifier.height(24.dp))
-            MonthlyCalendar(
-                monthData = monthData,
-                onDayClick = onDayClick,
-                modifier = Modifier.weight(1f)
-            )
+        if (widthSizeClass == WindowWidthSizeClass.Compact) {
+            // Portrait / Compact Layout
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                WeeklySummaryCard(summary = uiState.weeklySummary)
+                Spacer(modifier = Modifier.height(24.dp))
+                MonthlyCalendar(
+                    monthData = monthData,
+                    onDayClick = onDayClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        } else {
+            // Landscape / Expanded Layout
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    WeeklySummaryCard(summary = uiState.weeklySummary)
+                }
+                MonthlyCalendar(
+                    monthData = monthData,
+                    onDayClick = onDayClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         if (sheetState.isVisible && selectedDay != null) {
@@ -329,10 +363,10 @@ private fun DayDetailsBottomSheet(
     onDeleteWater: (Water) -> Unit,
     sheetState: SheetState
 ) {
+    // windowInsets Parameter entfernt, da er in der aktuellen Material3 Version nicht unterstützt wird oder optional ist
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        windowInsets = WindowInsets(0, 0, 0, 0)
+        sheetState = sheetState
     ) {
         val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp
         LazyColumn(
@@ -518,7 +552,8 @@ fun StatisticsScreenPreview() {
             onDismissBottomSheet = {},
             onAddWater = {},
             onDeleteWater = {},
-            onNavigateUp = {}
+            onNavigateUp = {},
+            widthSizeClass = WindowWidthSizeClass.Compact
         )
     }
 }
