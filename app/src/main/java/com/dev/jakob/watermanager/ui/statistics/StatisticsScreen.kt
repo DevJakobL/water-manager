@@ -5,11 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -132,7 +134,7 @@ private fun StatisticsScreenContent(
                 title = { Text(stringResource(R.string.menu_statistics)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                     }
                 }
             )
@@ -149,7 +151,8 @@ private fun StatisticsScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
             MonthlyCalendar(
                 monthData = monthData,
-                onDayClick = onDayClick
+                onDayClick = onDayClick,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -215,8 +218,9 @@ private fun MonthlyCalendar(
     modifier: Modifier = Modifier
 ) {
     val yearMonth = if (monthData.isNotEmpty()) YearMonth.from(monthData.first().date) else YearMonth.now()
-    val firstDayOfMonth = yearMonth.atDay(1).dayOfWeek.value % 7
+    val firstDayOfMonth = yearMonth.atDay(1).dayOfWeek.value - 1
     val daysInMonth = yearMonth.lengthOfMonth()
+    val dayMap = remember(monthData) { monthData.associateBy { it.date.dayOfMonth } }
 
     Column(modifier = modifier) {
         Text(
@@ -234,29 +238,31 @@ private fun MonthlyCalendar(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        val dayMap = monthData.associateBy { it.date.dayOfMonth }
-        val totalCells = (firstDayOfMonth + daysInMonth + 6) / 7 * 7
-        for (i in 0 until totalCells / 7) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                for (j in 0..6) {
-                    val dayIndex = i * 7 + j
-                    val dayOfMonth = dayIndex - firstDayOfMonth + 1
-                    if (dayOfMonth in 1..daysInMonth) {
-                        val dayData = dayMap[dayOfMonth]
-                        DayCell(day = dayOfMonth, data = dayData, onClick = {
-                            val date = yearMonth.atDay(dayOfMonth)
-                            val data = dayMap[dayOfMonth] ?: DayData(date, 0, 0)
-                            onDayClick(data)
-                        })
-                    } else {
-                        Box(modifier = Modifier.size(40.dp))
-                    }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7),
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Leere Zellen für den Versatz am Monatsanfang
+            items(firstDayOfMonth) {
+                Box(modifier = Modifier.size(40.dp))
+            }
+
+            // Die eigentlichen Tage
+            items(daysInMonth) { index ->
+                val dayOfMonth = index + 1
+                val dayData = dayMap[dayOfMonth]
+
+                Box(contentAlignment = Alignment.Center) {
+                    DayCell(day = dayOfMonth, data = dayData, onClick = {
+                        val date = yearMonth.atDay(dayOfMonth)
+                        val data = dayMap[dayOfMonth] ?: DayData(date, 0, 0)
+                        onDayClick(data)
+                    })
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
