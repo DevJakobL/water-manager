@@ -2,10 +2,15 @@ package com.dev.jakob.watermanager.ui.settings.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.repository.WaterRepository
+import com.dev.jakob.watermanager.worker.HydrationReminderWorker
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 /**
  * Repräsentiert den UI-Zustand des Einstellungsbildschirms.
@@ -14,12 +19,18 @@ import kotlinx.coroutines.launch
  * @property bodyWeight Das Körpergewicht des Benutzers in Kilogramm.
  * @property calculationFactor Der Berechnungsfaktor in ml/kg zur Berechnung des Tagesziels.
  * @property dailyGoal Das berechnete tägliche Wasserziel in Millilitern.
+ * @property notificationsEnabled Ob Benachrichtigungen aktiviert sind.
+ * @property notificationStartHour Die Startstunde für Benachrichtigungen (0-23).
+ * @property notificationEndHour Die Endstunde für Benachrichtigungen (0-23).
  */
 data class SettingsUiState(
     val containers: List<Container> = emptyList(),
     val bodyWeight: Int = 0,
     val calculationFactor: Int = 30,
-    val dailyGoal: Int = 0
+    val dailyGoal: Int = 0,
+    val notificationsEnabled: Boolean = false,
+    val notificationStartHour: Int = 8,
+    val notificationEndHour: Int = 23
 )
 
 /**
@@ -29,8 +40,12 @@ data class SettingsUiState(
  * um Benutzerdaten wie Körpergewicht, Berechnungsfaktor und Trinkgefäße zu speichern und abzurufen.
  *
  * @param repository Das [WaterRepository] zur Datenverwaltung.
+ * @param workManager Der [WorkManager] zum Planen von Hintergrundaufgaben.
  */
-class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
+class SettingsViewModel(
+    private val repository: WaterRepository,
+    private val workManager: WorkManager
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
 
@@ -39,24 +54,45 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
      */
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+    // Hilfsklasse für combine, da combine nur bis zu 5 Argumente direkt unterstützt
+    private data class SettingsPartialState(
+        val bodyWeight: Int,
+        val dailyGoal: Int,
+        val notificationsEnabled: Boolean,
+        val startHour: Int,
+        val endHour: Int
+    )
+
     init {
         // Kombiniert die Flows aus dem Repository, um den UI-Zustand zu aktualisieren.
-        // Berechnet den Faktor basierend auf dem aktuellen Körpergewicht und Tagesziel.
+        // Da combine maximal 5 Flows unterstützt, gruppieren wir die Einstellungen.
+        val partialSettingsFlow = combine(
+            repository.getBodyWeight(),
+            repository.getDailyGoal(),
+            repository.getNotificationsEnabled(),
+            repository.getNotificationStartHour(),
+            repository.getNotificationEndHour()
+        ) { bodyWeight, dailyGoal, notificationsEnabled, startHour, endHour ->
+            SettingsPartialState(bodyWeight, dailyGoal, notificationsEnabled, startHour, endHour)
+        }
+
         combine(
             repository.getAllContainers(),
-            repository.getBodyWeight(),
-            repository.getDailyGoal()
-        ) { containers, bodyWeight, dailyGoal ->
-            val calculatedFactor = if (bodyWeight > 0 && dailyGoal > 0) {
-                (dailyGoal.toFloat() / bodyWeight.toFloat()).toInt().coerceIn(30, 40)
+            partialSettingsFlow
+        ) { containers, partialState ->
+            val calculatedFactor = if (partialState.bodyWeight > 0 && partialState.dailyGoal > 0) {
+                (partialState.dailyGoal.toFloat() / partialState.bodyWeight.toFloat()).toInt().coerceIn(30, 40)
             } else {
                 30
             }
             SettingsUiState(
                 containers = containers,
-                bodyWeight = bodyWeight,
-                dailyGoal = dailyGoal,
-                calculationFactor = calculatedFactor
+                bodyWeight = partialState.bodyWeight,
+                dailyGoal = partialState.dailyGoal,
+                calculationFactor = calculatedFactor,
+                notificationsEnabled = partialState.notificationsEnabled,
+                notificationStartHour = partialState.startHour,
+                notificationEndHour = partialState.endHour
             )
         }.onEach { newState ->
             _uiState.value = newState
@@ -141,6 +177,28 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
         }
     }
 
+    fun onNotificationsEnabledChanged(enabled: Boolean) {
+        _uiState.update { it.copy(notificationsEnabled = enabled) }
+        viewModelScope.launch {
+            repository.saveNotificationsEnabled(enabled)
+            scheduleHydrationReminder(enabled)
+        }
+    }
+
+    fun onNotificationStartHourChanged(hour: Int) {
+        _uiState.update { it.copy(notificationStartHour = hour) }
+        viewModelScope.launch {
+            repository.saveNotificationStartHour(hour)
+        }
+    }
+
+    fun onNotificationEndHourChanged(hour: Int) {
+        _uiState.update { it.copy(notificationEndHour = hour) }
+        viewModelScope.launch {
+            repository.saveNotificationEndHour(hour)
+        }
+    }
+
     /**
      * Speichert die aktuellen Einstellungen (Körpergewicht und Tagesziel)
      * persistent über das [WaterRepository].
@@ -151,6 +209,7 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
             val currentState = _uiState.value
             repository.saveBodyWeight(currentState.bodyWeight)
             repository.saveDailyGoal(currentState.dailyGoal)
+            // Notification settings are saved immediately on change
         }
     }
 
@@ -163,5 +222,19 @@ class SettingsViewModel(private val repository: WaterRepository) : ViewModel() {
      */
     private fun calculateDailyGoal(bodyWeight: Int, factor: Int): Int {
         return bodyWeight * factor
+    }
+
+    private fun scheduleHydrationReminder(enabled: Boolean) {
+        if (enabled) {
+            val workRequest = PeriodicWorkRequestBuilder<HydrationReminderWorker>(1, TimeUnit.HOURS)
+                .build()
+            workManager.enqueueUniquePeriodicWork(
+                "hydration_reminder",
+                ExistingPeriodicWorkPolicy.UPDATE,
+                workRequest
+            )
+        } else {
+            workManager.cancelUniqueWork("hydration_reminder")
+        }
     }
 }

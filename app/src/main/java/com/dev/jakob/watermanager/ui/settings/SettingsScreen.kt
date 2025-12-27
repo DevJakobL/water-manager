@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -95,6 +96,21 @@ fun SettingsScreen(
                         showContainerDialog = true
                     },
                     onDeleteContainer = viewModel::removeContainer
+                )
+            }
+        ),
+        SettingPage(
+            route = "notifications",
+            labelResId = R.string.notifications,
+            icon = Icons.Filled.Notifications,
+            content = {
+                NotificationsScreen(
+                    uiState = uiState,
+                    onNotificationsEnabledChange = viewModel::onNotificationsEnabledChanged,
+                    onTimeRangeChange = { start, end ->
+                        viewModel.onNotificationStartHourChanged(start)
+                        viewModel.onNotificationEndHourChanged(end)
+                    }
                 )
             }
         )

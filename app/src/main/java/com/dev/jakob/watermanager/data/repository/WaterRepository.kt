@@ -111,4 +111,30 @@ class WaterRepository(private val waterLocalDataSource: WaterLocalDataSource) {
             waterLocalDataSource.saveBodyWeight(weight)
         }
     }
+
+    // --- Notification Settings ---
+
+    fun getNotificationsEnabled(): Flow<Boolean> = waterLocalDataSource.getNotificationsEnabled()
+
+    suspend fun saveNotificationsEnabled(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveNotificationsEnabled(enabled)
+        }
+    }
+
+    fun getNotificationStartHour(): Flow<Int> = waterLocalDataSource.getNotificationStartHour()
+
+    suspend fun saveNotificationStartHour(hour: Int) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveNotificationStartHour(hour)
+        }
+    }
+
+    fun getNotificationEndHour(): Flow<Int> = waterLocalDataSource.getNotificationEndHour()
+
+    suspend fun saveNotificationEndHour(hour: Int) {
+        withContext(Dispatchers.IO) {
+            waterLocalDataSource.saveNotificationEndHour(hour)
+        }
+    }
 }

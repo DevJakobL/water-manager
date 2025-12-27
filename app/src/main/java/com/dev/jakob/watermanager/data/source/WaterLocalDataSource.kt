@@ -2,7 +2,7 @@ package com.dev.jakob.watermanager.data.source
 
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.model.Water
-import com.google.gson.Gson // Gson wird nicht mehr direkt für SharedPreferences-Migration benötigt, aber vielleicht noch für andere Zwecke? Wenn nicht, kann es entfernt werden.
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -46,4 +46,14 @@ class WaterLocalDataSource(
 
     fun getBodyWeight(): Flow<Int> = settingsDataStore.bodyWeight
     suspend fun saveBodyWeight(weight: Int) = settingsDataStore.saveBodyWeight(weight)
+
+    // Notification Settings
+    fun getNotificationsEnabled(): Flow<Boolean> = settingsDataStore.notificationsEnabled
+    suspend fun saveNotificationsEnabled(enabled: Boolean) = settingsDataStore.saveNotificationsEnabled(enabled)
+
+    fun getNotificationStartHour(): Flow<Int> = settingsDataStore.notificationStartHour
+    suspend fun saveNotificationStartHour(hour: Int) = settingsDataStore.saveNotificationStartHour(hour)
+
+    fun getNotificationEndHour(): Flow<Int> = settingsDataStore.notificationEndHour
+    suspend fun saveNotificationEndHour(hour: Int) = settingsDataStore.saveNotificationEndHour(hour)
 }
