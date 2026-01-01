@@ -2,9 +2,7 @@ package com.dev.jakob.watermanager.ui.settings.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
+import androidx.work.*
 import com.dev.jakob.watermanager.data.model.Container
 import com.dev.jakob.watermanager.data.repository.WaterRepository
 import com.dev.jakob.watermanager.worker.HydrationReminderWorker
@@ -197,6 +195,13 @@ class SettingsViewModel(
         viewModelScope.launch {
             repository.saveNotificationEndHour(hour)
         }
+    }
+
+    fun sendTestNotification() {
+        val workRequest = OneTimeWorkRequestBuilder<HydrationReminderWorker>()
+            .setInputData(workDataOf("IS_TEST" to true))
+            .build()
+        workManager.enqueue(workRequest)
     }
 
     /**

@@ -110,7 +110,8 @@ fun SettingsScreen(
                     onTimeRangeChange = { start, end ->
                         viewModel.onNotificationStartHourChanged(start)
                         viewModel.onNotificationEndHourChanged(end)
-                    }
+                    },
+                    onTestNotification = viewModel::sendTestNotification
                 )
             }
         )

@@ -2,7 +2,6 @@ package com.dev.jakob.watermanager.ui.settings
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -13,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.dev.jakob.watermanager.BuildConfig
 import com.dev.jakob.watermanager.ui.settings.viewmodel.SettingsUiState
 import kotlin.math.roundToInt
 
@@ -21,7 +21,8 @@ import kotlin.math.roundToInt
 fun NotificationsScreen(
     uiState: SettingsUiState,
     onNotificationsEnabledChange: (Boolean) -> Unit,
-    onTimeRangeChange: (Int, Int) -> Unit
+    onTimeRangeChange: (Int, Int) -> Unit,
+    onTestNotification: () -> Unit
 ) {
     val context = LocalContext.current
     
@@ -54,21 +55,17 @@ fun NotificationsScreen(
                 checked = uiState.notificationsEnabled,
                 onCheckedChange = { shouldEnable ->
                     if (shouldEnable) {
-                        // Prüfen, ob wir auf Android 13+ sind und die Berechtigung brauchen
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            val hasPermission = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED
+                        // Da minSdk = 33 ist, sind wir immer auf Android 13+ (Tiramisu)
+                        // und benötigen die Runtime Permission.
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS
+                        ) == PackageManager.PERMISSION_GRANTED
 
-                            if (hasPermission) {
-                                onNotificationsEnabledChange(true)
-                            } else {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        } else {
-                            // Unter Android 13 ist keine Laufzeitberechtigung nötig
+                        if (hasPermission) {
                             onNotificationsEnabledChange(true)
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     } else {
                         onNotificationsEnabledChange(false)
@@ -105,6 +102,18 @@ fun NotificationsScreen(
                     valueRange = 0f..23f,
                     steps = 22
                 )
+            }
+
+            // Show test button only in debug builds
+            if (BuildConfig.DEBUG) {
+                HorizontalDivider()
+
+                Button(
+                    onClick = onTestNotification,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Test-Benachrichtigung senden (Debug)")
+                }
             }
         }
     }

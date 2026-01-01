@@ -2,14 +2,19 @@ package com.dev.jakob.watermanager.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.dev.jakob.watermanager.MainActivity
 import com.dev.jakob.watermanager.R
 import com.dev.jakob.watermanager.data.repository.WaterRepository
 import kotlinx.coroutines.flow.first
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -24,9 +29,10 @@ import kotlin.math.roundToInt
  */
 class HydrationReminderWorker(
     appContext: Context,
-    workerParams: WorkerParameters,
-    private val waterRepository: WaterRepository
-) : CoroutineWorker(appContext, workerParams) {
+    workerParams: WorkerParameters
+) : CoroutineWorker(appContext, workerParams), KoinComponent {
+
+    private val waterRepository: WaterRepository by inject()
 
     override suspend fun doWork(): Result {
         val isTest = inputData.getBoolean("IS_TEST", false)
@@ -119,12 +125,25 @@ class HydrationReminderWorker(
             text = "Du bist aktuell $formattedAmount L über deinem Zeitplan. Weiter so!"
         }
 
+        // Create intent to open MainActivity
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground) 
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
+            .setContentIntent(pendingIntent) // Set the intent
+            .setAutoCancel(true) // Remove notification on click
             .build()
 
         notificationManager.notify(1, notification)
